@@ -1,0 +1,23 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // User profiles
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Memes
+    match /memes/{memeId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null 
+        && request.resource.data.uploadedBy == request.auth.uid;
+      allow update: if request.auth != null 
+        && (resource.data.uploadedBy == request.auth.uid 
+            || request.resource.data.diff(resource.data).affectedKeys()
+                .hasOnly(['likes', 'skips']));
+      allow delete: if request.auth != null 
+        && resource.data.uploadedBy == request.auth.uid;
+    }
+  }
+} 

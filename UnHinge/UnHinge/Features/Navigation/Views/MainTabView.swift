@@ -10,12 +10,11 @@ import SwiftUI
 struct MainTabView: View {
     var body: some View {
         TabView {
-            
-            ExploreView()
-            .tabItem {
-                Image(systemName: "globe")
-                Text("Explore")
-            }
+            MemeSwipeView()
+                .tabItem {
+                    Image(systemName: "globe")
+                    Text("Explore")
+                }
             
             TalkingStageView()
                 .tabItem {

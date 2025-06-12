@@ -1,10 +1,12 @@
 import Foundation
 import FirebaseFirestore
-import FirebaseFirestoreSwift
 import FirebaseAuth
 import FirebaseStorage
+import UIKit
+import Combine
 
-class MemeManager: ObservableObject {
+@MainActor
+final class MemeManager: ObservableObject {
     @Published var memes: [Meme] = []
     @Published var isLoading: Bool = false
     @Published var errorMessage: String? = nil
@@ -12,47 +14,48 @@ class MemeManager: ObservableObject {
     private var db = Firestore.firestore()
     private var storage = Storage.storage()
     private var userId: String? { Auth.auth().currentUser?.uid }
+    private var currentTask: Task<Void, Never>?
+    
+    deinit {
+        currentTask?.cancel()
+    }
     
     func fetchMemes() {
+        currentTask?.cancel()
         isLoading = true
         errorMessage = nil
-        guard let userId = userId else {
-            self.errorMessage = "User not logged in."
-            self.isLoading = false
-            return
-        }
-        // Fetch liked/skipped meme IDs first
-        db.collection("users").document(userId).getDocument { userDoc, error in
-            if let error = error {
-                DispatchQueue.main.async {
-                    self.errorMessage = error.localizedDescription
-                    self.isLoading = false
+        
+        currentTask = Task {
+            do {
+                guard let userId = userId else {
+                    throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "User not logged in"])
                 }
-                return
+                
+                // Fetch liked/skipped meme IDs first
+                let userDoc = try await db.collection("users").document(userId).getDocument()
+                let liked = userDoc.data()?["likedMemes"] as? [String] ?? []
+                let skipped = userDoc.data()?["skippedMemes"] as? [String] ?? []
+                let excludeIds = liked + skipped
+                
+                // Fetch memes not in liked or skipped
+                let query = db.collection("memes")
+                    .whereField("uploadedBy", isNotEqualTo: userId)
+                    .limit(to: 20)
+                
+                let snapshot = try await query.getDocuments()
+                memes = snapshot.documents.compactMap { document in
+                    try? document.data(as: Meme.self)
+                }.filter { meme in
+                    !excludeIds.contains(meme.id)
+                }
+            } catch {
+                if !Task.isCancelled {
+                    errorMessage = error.localizedDescription
+                }
             }
-            let liked = userDoc?.data()? ["likedMemes"] as? [String] ?? []
-            let skipped = userDoc?.data()? ["skippedMemes"] as? [String] ?? []
-            let excludeIds = liked + skipped
-            // Fetch memes not in excludeIds
-            self.db.collection("memes").order(by: "uploadedAt", descending: true).getDocuments { snapshot, error in
-                DispatchQueue.main.async {
-                    self.isLoading = false
-                    if let error = error {
-                        self.errorMessage = error.localizedDescription
-                        return
-                    }
-                    guard let documents = snapshot?.documents else {
-                        self.errorMessage = "No memes found."
-                        return
-                    }
-                    self.memes = documents.compactMap { doc in
-                        let meme = try? doc.data(as: Meme.self)
-                        if let meme = meme, !excludeIds.contains(meme.id) {
-                            return meme
-                        }
-                        return nil
-                    }
-                }
+            
+            if !Task.isCancelled {
+                isLoading = false
             }
         }
     }

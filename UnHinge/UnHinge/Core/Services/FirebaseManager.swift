@@ -2,9 +2,9 @@ import Foundation
 import FirebaseCore
 import FirebaseAuth
 import FirebaseFirestore
-import FirebaseFirestoreSwift
+import FirebaseStorage
 
-class FirebaseManager {
+final class FirebaseManager {
     static let shared = FirebaseManager()
     
     private init() {}
@@ -16,87 +16,89 @@ class FirebaseManager {
     // MARK: - Authentication Methods
     func signInWithApple() async throws -> AuthDataResult {
         // TODO: Implement Apple Sign In
-        fatalError("Not implemented")
+        throw NSError(domain: "FirebaseManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Apple Sign In not implemented"])
     }
     
     func signInWithEmail(email: String, password: String) async throws -> AuthDataResult {
-        try await Auth.auth().signIn(withEmail: email, password: password)
+        do {
+            return try await Auth.auth().signIn(withEmail: email, password: password)
+        } catch {
+            throw NSError(domain: "FirebaseManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to sign in: \(error.localizedDescription)"])
+        }
     }
     
     func createUser(email: String, password: String) async throws -> AuthDataResult {
-        try await Auth.auth().createUser(withEmail: email, password: password)
+        do {
+            return try await Auth.auth().createUser(withEmail: email, password: password)
+        } catch {
+            throw NSError(domain: "FirebaseManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to create user: \(error.localizedDescription)"])
+        }
     }
     
     func signOut() throws {
-        try Auth.auth().signOut()
+        do {
+            try Auth.auth().signOut()
+        } catch {
+            throw NSError(domain: "FirebaseManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to sign out: \(error.localizedDescription)"])
+        }
     }
     
     // MARK: - Firestore Methods
-    func saveUserProfile(_ user: User) async throws {
+    func saveUserProfile(_ user: AppUser) async throws {
         let db = Firestore.firestore()
-        try await db.collection("users").document(user.id).setData(from: user)
+        do {
+            try await db.collection("users").document(user.id).setData(from: user)
+        } catch {
+            throw NSError(domain: "FirebaseManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to save user profile: \(error.localizedDescription)"])
+        }
     }
     
-    func getUserProfile(userId: String) async throws -> User {
+    func getUserProfile(userId: String) async throws -> AppUser {
         let db = Firestore.firestore()
-        let document = try await db.collection("users").document(userId).getDocument()
-        return try document.data(as: User.self)
+        do {
+            let document = try await db.collection("users").document(userId).getDocument()
+            guard document.exists else {
+                throw NSError(domain: "FirebaseManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "User profile not found"])
+            }
+            return try document.data(as: AppUser.self)
+        } catch {
+            throw NSError(domain: "FirebaseManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to get user profile: \(error.localizedDescription)"])
+        }
     }
     
-    // MARK: - Meme Methods (Modified to work without Storage)
+    // MARK: - Meme Methods
     func addMemeToDeck(userId: String, meme: Meme) async throws {
         let db = Firestore.firestore()
-        try await db.collection("users").document(userId).updateData([
-            "memeDeck": FieldValue.arrayUnion([try Firestore.Encoder().encode(meme)])
-        ])
+        do {
+            try await db.collection("users").document(userId).updateData([
+                "memes": FieldValue.arrayUnion([try Firestore.Encoder().encode(meme)])
+            ])
+        } catch {
+            throw NSError(domain: "FirebaseManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to add meme to deck: \(error.localizedDescription)"])
+        }
     }
     
     func removeMemeFromDeck(userId: String, memeId: String) async throws {
         let db = Firestore.firestore()
-        let user = try await getUserProfile(userId: userId)
-        let updatedDeck = user.memeDeck.filter { $0.id != memeId }
-        try await db.collection("users").document(userId).updateData([
-            "memeDeck": try Firestore.Encoder().encode(updatedDeck)
-        ])
+        do {
+            let user = try await getUserProfile(userId: userId)
+            let updatedDeck = user.memeDeck.filter { $0.id != memeId }
+            try await db.collection("users").document(userId).updateData([
+                "memeDeck": try Firestore.Encoder().encode(updatedDeck)
+            ])
+        } catch {
+            throw NSError(domain: "FirebaseManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to remove meme from deck: \(error.localizedDescription)"])
+        }
+    }
+    
+    func updateLastActive(userId: String) async throws {
+        let db = Firestore.firestore()
+        do {
+            try await db.collection("users").document(userId).updateData([
+                "lastActive": FieldValue.serverTimestamp()
+            ])
+        } catch {
+            throw NSError(domain: "FirebaseManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to update last active: \(error.localizedDescription)"])
+        }
     }
 }
-
-// MARK: - User Model
-struct User: Codable, Identifiable {
-    var id: String
-    var email: String
-    var username: String
-    var age: Int
-    var pronouns: String
-    var memePreferences: [String]
-    var memeDeck: [Meme]
-    var createdAt: Date
-    
-    enum CodingKeys: String, CodingKey {
-        case id
-        case email
-        case username
-        case age
-        case pronouns
-        case memePreferences
-        case memeDeck
-        case createdAt
-    }
-}
-
-// MARK: - Meme Model (Modified to work without Storage)
-struct Meme: Codable, Identifiable {
-    var id: String
-    var imageName: String // Changed from URL to String to use local assets
-    var tags: [String]
-    var uploadedBy: String
-    var uploadedAt: Date
-    
-    enum CodingKeys: String, CodingKey {
-        case id
-        case imageName
-        case tags
-        case uploadedBy
-        case uploadedAt
-    }
-} 

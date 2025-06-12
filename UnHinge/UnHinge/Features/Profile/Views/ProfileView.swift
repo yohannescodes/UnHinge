@@ -1,19 +1,19 @@
 import SwiftUI
 import PhotosUI
 import Charts
-import ProfileHeaderView
-import SocialLinksView
-import ProfileStatsView
-import StatView
-import InterestsView
+import UIKit
 
 struct ProfileView: View {
-    @StateObject private var viewModel = ProfileViewModel()
+    @StateObject private var viewModel: ProfileViewModel
     @State private var showingEditProfile = false
     @State private var showingSettings = false
     @State private var showingDeleteConfirmation = false
     @State private var showingAnalytics = false
     @State private var showingVerification = false
+    
+    init(viewModel: ProfileViewModel = ProfileViewModel()) {
+        _viewModel = StateObject(wrappedValue: viewModel)
+    }
     
     var body: some View {
         NavigationView {
@@ -22,15 +22,9 @@ struct ProfileView: View {
                     if viewModel.isLoading {
                         ProgressView()
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    } else if let user = viewModel.currentUser {
-                        ProfileHeaderView(
-                            user: user,
-                            showingVerification: $showingVerification
-                        )
-                        ProfileStatsView(user: user)
-                        if let interests = user.interests, !interests.isEmpty {
-                            InterestsView(interests: interests)
-                        }
+                    } else if let profile = viewModel.currentProfile {
+                        UserProfileView(profile: profile)
+                        ProfileStatsView(user: profile.user)
                         ProfileActionsView(
                             showingEditProfile: $showingEditProfile,
                             showingAnalytics: $showingAnalytics,
@@ -220,16 +214,16 @@ struct SettingsView: View {
     @State private var minAge = 18
     @State private var maxAge = 99
     @State private var maxDistance = 50
-    @State private var theme: User.AppTheme = .system
+    @State private var theme: AppTheme = .system
     @State private var language = "English"
-    @State private var notifications = User.NotificationPreferences(
+    @State private var notifications = AppUser.NotificationPreferences(
         newMatches: true,
         messages: true,
         likes: true,
         profileViews: true,
         marketing: false
     )
-    @State private var privacy = User.PrivacySettings(
+    @State private var privacy = AppUser.PrivacySettings(
         showOnlineStatus: true,
         showLastActive: true,
         showDistance: true,
@@ -256,9 +250,9 @@ struct SettingsView: View {
                 
                 Section("Appearance") {
                     Picker("Theme", selection: $theme) {
-                        Text("System").tag(User.AppTheme.system)
-                        Text("Light").tag(User.AppTheme.light)
-                        Text("Dark").tag(User.AppTheme.dark)
+                        Text("System").tag(AppTheme.system)
+                        Text("Light").tag(AppTheme.light)
+                        Text("Dark").tag(AppTheme.dark)
                     }
                     
                     Picker("Language", selection: $language) {

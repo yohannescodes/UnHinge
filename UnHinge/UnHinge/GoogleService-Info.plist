@@ -3,17 +3,17 @@
 <plist version="1.0">
 <dict>
 	<key>API_KEY</key>
-	<string>AIzaSyDSAr2csQudciGp7w6EOrOANH0jgQjcGgc</string>
+	<string>YOUR_API_KEY</string>
 	<key>GCM_SENDER_ID</key>
-	<string>383824275182</string>
+	<string>YOUR_SENDER_ID</string>
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
 	<string>com.yohannes.UnHinge</string>
 	<key>PROJECT_ID</key>
-	<string>unhinge-45878</string>
+	<string>unhinge-app</string>
 	<key>STORAGE_BUCKET</key>
-	<string>unhinge-45878.firebasestorage.app</string>
+	<string>unhinge-app.appspot.com</string>
 	<key>IS_ADS_ENABLED</key>
 	<false></false>
 	<key>IS_ANALYTICS_ENABLED</key>
@@ -25,6 +25,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:383824275182:ios:bcdc50ad07600327b935ff</string>
+	<string>YOUR_APP_ID</string>
 </dict>
 </plist>

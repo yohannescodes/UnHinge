@@ -10,6 +10,8 @@
 		7C79277B2DFA92B6005EADCF /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 7C79277A2DFA92B6005EADCF /* FirebaseAuth */; };
 		7C79277D2DFA92B6005EADCF /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7C79277C2DFA92B6005EADCF /* FirebaseCore */; };
 		7C79277F2DFA92B6005EADCF /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 7C79277E2DFA92B6005EADCF /* FirebaseFirestore */; };
+		8EE704802DFAAB4C0015B979 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = 8EE7047F2DFAAB4C0015B979 /* FirebaseMessaging */; };
+		8EE704822DFAAB4C0015B979 /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = 8EE704812DFAAB4C0015B979 /* FirebaseStorage */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -29,8 +31,10 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				8EE704802DFAAB4C0015B979 /* FirebaseMessaging in Frameworks */,
 				7C79277D2DFA92B6005EADCF /* FirebaseCore in Frameworks */,
 				7C79277B2DFA92B6005EADCF /* FirebaseAuth in Frameworks */,
+				8EE704822DFAAB4C0015B979 /* FirebaseStorage in Frameworks */,
 				7C79277F2DFA92B6005EADCF /* FirebaseFirestore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -77,6 +81,8 @@
 				7C79277A2DFA92B6005EADCF /* FirebaseAuth */,
 				7C79277C2DFA92B6005EADCF /* FirebaseCore */,
 				7C79277E2DFA92B6005EADCF /* FirebaseFirestore */,
+				8EE7047F2DFAAB4C0015B979 /* FirebaseMessaging */,
+				8EE704812DFAAB4C0015B979 /* FirebaseStorage */,
 			);
 			productName = UnHinge;
 			productReference = 8E31086E2DF9D2890014B916 /* UnHinge.app */;
@@ -372,6 +378,14 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 7C7927792DFA92B6005EADCF /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseFirestore;
+		};
+		8EE7047F2DFAAB4C0015B979 /* FirebaseMessaging */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = FirebaseMessaging;
+		};
+		8EE704812DFAAB4C0015B979 /* FirebaseStorage */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = FirebaseStorage;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

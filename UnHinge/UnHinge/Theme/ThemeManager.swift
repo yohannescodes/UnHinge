@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct AppTheme {
+struct ThemeColors {
     static let primary = Color("Primary")
     static let secondary = Color("Secondary")
     static let background = Color("Background")
@@ -23,8 +23,8 @@ struct ThemeModifier: ViewModifier {
     
     func body(content: Content) -> some View {
         content
-            .background(AppTheme.background)
-            .foregroundColor(AppTheme.text)
+            .background(ThemeColors.background)
+            .foregroundColor(ThemeColors.text)
     }
 }
 

@@ -1,19 +1,22 @@
 import Foundation
 import FirebaseFirestore
-import FirebaseFirestoreSwift
 import FirebaseAuth
 import FirebaseStorage
+import UIKit
 import Combine
 
 @MainActor
-class ProfileViewModel: BaseViewModel {
+final class ProfileViewModel: BaseViewModel {
     // MARK: - Published Properties
     @Published var currentUser: User?
+    @Published var currentProfile: UserProfile?
     @Published var isUploadingImage = false
     @Published var isVerifying = false
     
     // MARK: - Private Properties
     private let firebaseService = FirebaseService.shared
+    private var cancellables = Set<AnyCancellable>()
+    private var currentTask: Task<Void, Never>?
     
     // MARK: - Initialization
     override init() {
@@ -22,13 +25,34 @@ class ProfileViewModel: BaseViewModel {
         startAnalyticsTracking()
     }
     
+    deinit {
+        currentTask?.cancel()
+        cancellables.forEach { $0.cancel() }
+    }
+    
     // MARK: - Public Methods
     
     func loadCurrentUser() {
-        guard let userId = Auth.auth().currentUser?.uid else { return }
+        currentTask?.cancel()
         
-        performTask {
-            self.currentUser = try await self.firebaseService.getUser(userId: userId)
+        currentTask = Task { [weak self] in
+            guard let self = self else { return }
+            guard let userId = Auth.auth().currentUser?.uid else { return }
+            
+            do {
+                self.currentUser = try await self.firebaseService.getUser(userId: userId)
+                if !Task.isCancelled, let user = self.currentUser {
+                    self.currentProfile = UserProfile(
+                        user: user,
+                        isOnline: true,
+                        lastActive: user.lastActive
+                    )
+                }
+            } catch {
+                if !Task.isCancelled {
+                    self.handleError(error)
+                }
+            }
         }
     }
     
@@ -65,18 +89,20 @@ class ProfileViewModel: BaseViewModel {
                     socialLinks: socialLinks
                 )
             }
+            
+            await self.loadCurrentUser()
         }
     }
     
     func updatePreferences(
-        theme: User.AppTheme,
+        theme: AppTheme,
         language: String,
-        notifications: User.NotificationPreferences,
-        privacy: User.PrivacySettings
+        notifications: AppUser.NotificationPreferences,
+        privacy: AppUser.PrivacySettings
     ) {
         guard let userId = Auth.auth().currentUser?.uid else { return }
         
-        let preferences = User.UserPreferences(
+        let preferences = AppUser.UserPreferences(
             theme: theme,
             language: language,
             notifications: notifications,
@@ -135,27 +161,20 @@ class ProfileViewModel: BaseViewModel {
         profileImageURL: String?,
         socialLinks: User.SocialLinks
     ) async throws {
-        var data: [String: Any] = [
+        let userData: [String: Any] = [
             "name": name,
+            "bio": bio as Any,
             "interests": interests,
-            "socialLinks": socialLinks.dictionary
+            "profileImageURL": profileImageURL as Any,
+            "socialLinks": [
+                "instagram": socialLinks.instagram as Any,
+                "twitter": socialLinks.twitter as Any,
+                "tiktok": socialLinks.tiktok as Any,
+                "spotify": socialLinks.spotify as Any
+            ]
         ]
         
-        if let bio = bio {
-            data["bio"] = bio
-        }
-        
-        if let profileImageURL = profileImageURL {
-            data["profileImageURL"] = profileImageURL
-        }
-        
-        try await firebaseService.updateUser(userId: userId, data: data)
-        
-        currentUser?.name = name
-        currentUser?.bio = bio
-        currentUser?.interests = interests
-        currentUser?.profileImageURL = profileImageURL
-        currentUser?.socialLinks = socialLinks
+        try await firebaseService.updateUser(userId: userId, data: userData)
     }
     
     private func startAnalyticsTracking() {
@@ -175,7 +194,7 @@ class ProfileViewModel: BaseViewModel {
 }
 
 // MARK: - Dictionary Extensions
-extension User.SocialLinks {
+extension AppUser.SocialLinks {
     var dictionary: [String: Any] {
         var dict: [String: Any] = [:]
         if let instagram = instagram { dict["instagram"] = instagram }
@@ -186,7 +205,7 @@ extension User.SocialLinks {
     }
 }
 
-extension User.UserPreferences {
+extension AppUser.UserPreferences {
     var dictionary: [String: Any] {
         [
             "theme": theme.rawValue,

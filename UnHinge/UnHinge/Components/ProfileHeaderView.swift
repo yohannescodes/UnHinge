@@ -1,10 +1,10 @@
 import SwiftUI
 
 public struct ProfileHeaderView: View {
-    public let user: User
+    public let user: AppUser
     @Binding public var showingVerification: Bool
     
-    public init(user: User, showingVerification: Binding<Bool>) {
+    public init(user: AppUser, showingVerification: Binding<Bool>) {
         self.user = user
         self._showingVerification = showingVerification
     }
@@ -60,9 +60,7 @@ public struct ProfileHeaderView: View {
                     .multilineTextAlignment(.center)
                     .padding(.horizontal)
             }
-            if let socialLinks = user.socialLinks {
-                SocialLinksView(socialLinks: socialLinks)
-            }
+            SocialLinksView(socialLinks: user.socialLinks)
         }
         .padding()
     }

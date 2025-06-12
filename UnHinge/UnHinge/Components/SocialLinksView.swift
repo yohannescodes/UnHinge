@@ -1,44 +1,47 @@
 import SwiftUI
 
-public struct SocialLinksView: View {
-    public let socialLinks: User.SocialLinks
+struct SocialLinksView: View {
+    let socialLinks: AppUser.SocialLinks
     
-    public init(socialLinks: User.SocialLinks) {
-        self.socialLinks = socialLinks
+    private func constructURL(scheme: String, host: String, path: String) -> URL? {
+        var components = URLComponents()
+        components.scheme = scheme
+        components.host = host
+        components.path = path
+        return components.url
     }
     
-    public var body: some View {
+    var body: some View {
         HStack(spacing: 16) {
-            if let instagram = socialLinks.instagram {
-                Link(destination: URL(string: "https://instagram.com/\(instagram)")!) {
-                    Image("instagram")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 24, height: 24)
+            if let instagram = socialLinks.instagram,
+               let url = constructURL(scheme: "https", host: "instagram.com", path: "/\(instagram)") {
+                Link(destination: url) {
+                    Image(systemName: "camera")
+                        .foregroundColor(.pink)
                 }
             }
-            if let twitter = socialLinks.twitter {
-                Link(destination: URL(string: "https://twitter.com/\(twitter)")!) {
-                    Image("twitter")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 24, height: 24)
+            
+            if let twitter = socialLinks.twitter,
+               let url = constructURL(scheme: "https", host: "twitter.com", path: "/\(twitter)") {
+                Link(destination: url) {
+                    Image(systemName: "message")
+                        .foregroundColor(.blue)
                 }
             }
-            if let tiktok = socialLinks.tiktok {
-                Link(destination: URL(string: "https://tiktok.com/@\(tiktok)")!) {
-                    Image("tiktok")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 24, height: 24)
+            
+            if let tiktok = socialLinks.tiktok,
+               let url = constructURL(scheme: "https", host: "tiktok.com", path: "/@\(tiktok)") {
+                Link(destination: url) {
+                    Image(systemName: "music.note")
+                        .foregroundColor(.black)
                 }
             }
-            if let spotify = socialLinks.spotify {
-                Link(destination: URL(string: "https://open.spotify.com/user/\(spotify)")!) {
-                    Image("spotify")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 24, height: 24)
+            
+            if let spotify = socialLinks.spotify,
+               let url = constructURL(scheme: "https", host: "open.spotify.com", path: "/user/\(spotify)") {
+                Link(destination: url) {
+                    Image(systemName: "music.note.list")
+                        .foregroundColor(.green)
                 }
             }
         }

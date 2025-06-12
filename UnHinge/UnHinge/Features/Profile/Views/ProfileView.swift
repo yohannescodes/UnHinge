@@ -54,7 +54,7 @@ struct ProfileView: View {
                         if let user = viewModel.currentUser {
                             // user.memeDeck is non-optional [Meme]
                             // MemeDeckView expects [Meme], so direct pass is fine.
-                            // The error "Initializer for conditional binding must have Optional type, not '[Meme]'"
+                            // The error "Initializer for conditional binding must have Optional type, not '[Meme]'" 
                             // must be from somewhere else if this line (39 in original error report) was the target.
                             // Assuming the error was indeed for a construct like `if let x = nonOptionalArray`.
                             // The current structure `if let user = viewModel.currentUser` is correct.
@@ -500,7 +500,7 @@ struct AnalyticsView: View {
             return "\(hours)h \(remainingMinutes)m"
         }
     }
-}
+
 
 // MARK: - Verification View
 struct VerificationView: View {

@@ -44,25 +44,7 @@ final class MemeManager: ObservableObject {
                 
                 let snapshot = try await query.getDocuments()
                 memes = snapshot.documents.compactMap { document in
-                    let data = document.data()
-                    let id = document.documentID
-                    guard let imageUrl = data["imageUrl"] as? String,
-                          let caption = data["caption"] as? String,
-                          let uploadedBy = data["uploadedBy"] as? String,
-                          let uploadedAtTimestamp = data["uploadedAt"] as? Timestamp,
-                          let likes = data["likes"] as? Int,
-                          let skips = data["skips"] as? Int else {
-                        return nil
-                    }
-                    return Meme(
-                        id: id,
-                        imageUrl: imageUrl,
-                        caption: caption,
-                        uploadedBy: uploadedBy,
-                        uploadedAt: uploadedAtTimestamp.dateValue(),
-                        likes: likes,
-                        skips: skips
-                    )
+                    try? document.data(as: Meme.self)
                 }.filter { meme in
                     !excludeIds.contains(meme.id)
                 }
@@ -135,21 +117,11 @@ final class MemeManager: ObservableObject {
                     skips: 0
                 )
                 
-                let memeData: [String: Any] = [
-                    "id": meme.id,
-                    "imageUrl": meme.imageUrl,
-                    "caption": meme.caption,
-                    "uploadedBy": meme.uploadedBy,
-                    "uploadedAt": Timestamp(date: meme.uploadedAt),
-                    "likes": meme.likes,
-                    "skips": meme.skips
-                ]
-                self.db.collection("memes").document(meme.id).setData(memeData) { error in
-                    if let error = error {
-                        completion(.failure(error))
-                    } else {
-                        completion(.success(()))
-                    }
+                do {
+                    try self.db.collection("memes").document(meme.id).setData(from: meme)
+                    completion(.success(()))
+                } catch {
+                    completion(.failure(error))
                 }
             }
         }

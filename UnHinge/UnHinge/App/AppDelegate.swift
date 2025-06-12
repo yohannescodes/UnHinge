@@ -13,7 +13,14 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         Messaging.messaging().delegate = self
         
         // Request notification permission
-        notificationManager.requestPermission()
+        Task {
+            do {
+                try await notificationManager.requestAuthorization()
+            } catch {
+                // Optional: Log an error or handle it if authorization fails
+                print("Failed to request notification authorization: \(error)")
+            }
+        }
         
         return true
     }
@@ -27,7 +34,7 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 extension AppDelegate: MessagingDelegate {
     func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
         if let token = fcmToken {
-            notificationManager.updateFCMToken()
+            notificationManager.updateFCMToken(token) // Pass the token
         }
     }
 }

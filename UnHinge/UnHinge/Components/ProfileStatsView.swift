@@ -14,9 +14,9 @@ public struct ProfileStatsView: View {
             StatView(title: "UserID", value: user.id)
             StatView(title: "Email", value: user.email)
             // TODO: Replace these with real stats from your data model, not Firebase User
-            StatView(title: "Matches", value: String(user.analytics.totalMatches))
+            StatView(title: "Matches", value: String(user.analytics.matches)) // Corrected field name
             StatView(title: "Memes", value: String(user.memeDeck.count))
-            StatView(title: "Likes", value: String(user.analytics.totalLikes))
+            StatView(title: "Swipes", value: String(user.analytics.totalSwipes)) // Changed to use totalSwipes
         }
         .padding(.vertical)
     }

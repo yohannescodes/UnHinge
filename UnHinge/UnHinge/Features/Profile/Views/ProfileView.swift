@@ -37,11 +37,19 @@ struct ProfileView: View {
                         )
 
                         // Add MemeDeckView here
-                        if let user = viewModel.currentUser { // user.memeDeck is non-optional
+                        if let user = viewModel.currentUser {
+                            // user.memeDeck is non-optional [Meme]
+                            // MemeDeckView expects [Meme], so direct pass is fine.
+                            // The error "Initializer for conditional binding must have Optional type, not '[Meme]'"
+                            // must be from somewhere else if this line (39 in original error report) was the target.
+                            // Assuming the error was indeed for a construct like `if let x = nonOptionalArray`.
+                            // The current structure `if let user = viewModel.currentUser` is correct.
+                            // If `user.memeDeck` itself was being conditionally bound, that would be an error.
+                            // For now, this line is correct as `user.memeDeck` is passed directly.
                             MemeDeckView(memes: user.memeDeck, onDelete: { memeId in
                                 viewModel.removeMemeFromDeck(memeId: memeId)
                             })
-                        } // Removed the `else if` as MemeDeckView handles empty state.
+                        }
                     }
                 }
             }
@@ -392,10 +400,11 @@ struct AnalyticsView: View {
         NavigationView {
             ScrollView {
                 VStack(spacing: 20) {
-                    if let analytics = user.analytics {
-                        // Profile Stats
-                        VStack(spacing: 16) {
-                            Text("Profile Stats")
+                    // user.analytics is non-optional UserAnalytics. No need for if-let.
+                    let analytics = user.analytics
+                    // Profile Stats
+                    VStack(spacing: 16) {
+                        Text("Profile Stats")
                                 .font(.headline)
                             
                             HStack(spacing: 20) {
@@ -613,7 +622,8 @@ struct RangeSlider: View {
         Slider(
             value: doubleBinding,
             in: doubleRange,
-            step: doubleStep
+            step: doubleStep,
+            onEditingChanged: { _ in } // Added onEditingChanged
         )
     }
 } 

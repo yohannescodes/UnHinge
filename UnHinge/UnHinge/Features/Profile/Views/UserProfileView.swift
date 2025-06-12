@@ -1,9 +1,11 @@
 import SwiftUI
 
+@MainActor // Mark UserProfileView as @MainActor
 public struct UserProfileView: View {
     let profile: UserProfile
     @State private var isEditing = false
     
+    // Initializer will also be MainActor isolated due to struct annotation
     public init(profile: UserProfile) {
         self.profile = profile
     }

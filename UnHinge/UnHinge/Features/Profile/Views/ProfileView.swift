@@ -12,21 +12,13 @@ struct ProfileView: View {
     @State private var showingAnalytics = false
     @State private var showingVerification = false
     
-    // Removed existing init with default argument
-    // init(viewModel: ProfileViewModel = ProfileViewModel()) {
-    //     _viewModel = StateObject(wrappedValue: viewModel)
-    // }
-
     @MainActor
     init(viewModel: ProfileViewModel) {
-        // Initialize with a provided viewModel instance
         _viewModel = StateObject(wrappedValue: viewModel)
     }
 
     @MainActor
     init() {
-        // Default initializer: create a new ProfileViewModel instance here.
-        // This ensures ProfileViewModel() is constructed fully within a @MainActor context.
         let defaultViewModel = ProfileViewModel()
         _viewModel = StateObject(wrappedValue: defaultViewModel)
     }
@@ -46,11 +38,9 @@ struct ProfileView: View {
                             showingAnalytics: $showingAnalytics,
                             showingSettings: $showingSettings,
                             showingDeleteConfirmation: $showingDeleteConfirmation,
-                            // Pass binding for the new sheet
                             showingAddMemeView: $viewModel.showingAddMemeView
                         )
 
-                        // Add MemeDeckView here
                         if let user = viewModel.currentUser {
                             MemeDeckView(memes: user.memeDeck, onDelete: { memeId in
                                 viewModel.removeMemeFromDeck(memeId: memeId)
@@ -60,7 +50,7 @@ struct ProfileView: View {
                 }
             }
             .navigationTitle("Profile")
-            .sheet(isPresented: $viewModel.showingAddMemeView) { // Use viewModel's published property
+            .sheet(isPresented: $viewModel.showingAddMemeView) {
                 AddMemeToDeckView(viewModel: viewModel)
             }
             .sheet(isPresented: $showingEditProfile) {
@@ -606,9 +596,10 @@ struct RangeSlider<V>: View where V: BinaryFloatingPoint, V.Stride: BinaryFloati
             value: self.$value,
             in: self.range,
             step: self.step,
-            onEditingChanged: { _ in }
+            onEditingChanged: { _ in },
+            minimumValueLabel: Text(String(describing: self.range.lowerBound)),
+            maximumValueLabel: Text(String(describing: self.range.upperBound)),
+            label: { EmptyView() }
         )
     }
 }
-// NOTE: Removed the erroneous comment line that was here in the previous file content.
-// If there was an actual extraneous brace, it should be gone now by providing the full correct content.

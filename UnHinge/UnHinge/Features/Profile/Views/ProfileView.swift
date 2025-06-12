@@ -2,6 +2,7 @@ import SwiftUI
 import PhotosUI
 import Charts
 import UIKit
+import FirebaseAuth // For Auth.auth().signOut() in SettingsView
 
 struct ProfileView: View {
     @StateObject private var viewModel: ProfileViewModel
@@ -36,13 +37,11 @@ struct ProfileView: View {
                         )
 
                         // Add MemeDeckView here
-                        if let user = viewModel.currentUser, let memeDeck = user.memeDeck {
-                            MemeDeckView(memes: memeDeck, onDelete: { memeId in
+                        if let user = viewModel.currentUser { // user.memeDeck is non-optional
+                            MemeDeckView(memes: user.memeDeck, onDelete: { memeId in
                                 viewModel.removeMemeFromDeck(memeId: memeId)
                             })
-                        } else if viewModel.currentUser != nil { // User loaded, but no meme deck or empty
-                            MemeDeckView(memes: [], onDelete: { _ in }) // Show empty state
-                        }
+                        } // Removed the `else if` as MemeDeckView handles empty state.
                     }
                 }
             }
@@ -400,9 +399,10 @@ struct AnalyticsView: View {
                                 .font(.headline)
                             
                             HStack(spacing: 20) {
-                                StatView(title: "Profile Views", value: "\(analytics.profileViews)")
-                                StatView(title: "Meme Views", value: "\(analytics.memeViews)")
-                                StatView(title: "Total Likes", value: "\(analytics.totalLikes)")
+                                // Corrected UserAnalytics fields
+                                StatView(title: "Total Swipes", value: String(analytics.totalSwipes))
+                                StatView(title: "Memes Shared", value: String(analytics.memesShared))
+                                StatView(title: "Matches", value: String(analytics.matches))
                             }
                         }
                         .padding()
@@ -410,15 +410,21 @@ struct AnalyticsView: View {
                         .cornerRadius(10)
                         .shadow(radius: 2)
                         
-                        // Match Stats
+                        // Match Stats - Assuming these fields exist or removing/commenting them if not
+                        // For now, focusing on the reported errors. If matchRate, responseRate, averageResponseTime
+                        // are not in UserAnalytics, they would also cause errors.
+                        // AppUser.UserAnalytics confirmed: activeHours, totalSwipes, matches, messagesSent, memesShared.
+                        // So, Match Stats section as it is will mostly error out.
+                        // Let's comment out the problematic StatViews in Match Stats for now to allow build.
                         VStack(spacing: 16) {
                             Text("Match Stats")
                                 .font(.headline)
                             
                             HStack(spacing: 20) {
-                                StatView(title: "Match Rate", value: String(format: "%.1f%%", analytics.matchRate * 100))
-                                StatView(title: "Response Rate", value: String(format: "%.1f%%", analytics.responseRate * 100))
-                                StatView(title: "Avg Response", value: formatTimeInterval(analytics.averageResponseTime))
+                                // StatView(title: "Match Rate", value: String(format: "%.1f%%", analytics.matchRate * 100))
+                                // StatView(title: "Response Rate", value: String(format: "%.1f%%", analytics.responseRate * 100))
+                                // StatView(title: "Avg Response", value: formatTimeInterval(analytics.averageResponseTime))
+                                StatView(title: "Messages Sent", value: String(analytics.messagesSent)) // Using an available stat
                             }
                         }
                         .padding()
@@ -596,13 +602,18 @@ struct RangeSlider: View {
     }
     
     var body: some View {
+        // Explicitly create bindings and range for clarity and type safety
+        let doubleBinding = Binding<Double>(
+            get: { Double(self.value) },
+            set: { self.value = Int($0) }
+        )
+        let doubleRange = Double(self.range.lowerBound)...Double(self.range.upperBound)
+        let doubleStep = Double(self.step)
+
         Slider(
-            value: Binding(
-                get: { Double(value) },
-                set: { value = Int($0) }
-            ),
-            in: Double(range.lowerBound)...Double(range.upperBound),
-            step: Double(step)
+            value: doubleBinding,
+            in: doubleRange,
+            step: doubleStep
         )
     }
 } 

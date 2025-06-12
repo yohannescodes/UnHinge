@@ -414,123 +414,53 @@ class FirebaseService {
                     }
                     
                     guard let documents = snapshot?.documents else {
-                        promise(.success([]))
+                        promise(.success([])) // No documents, return empty array
                         return
                     }
                     
-                    Task {
-                        do {
-                            var conversations: [ChatConversation] = []
+                    Task { // Launch a Task for the asynchronous processing
+                        var fetchedConversations: [ChatConversation] = []
+                        for document in documents {
+                            guard let participants = document.data()["participants"] as? [String],
+                                  let lastUpdated = (document.data()["lastUpdated"] as? Timestamp)?.dateValue() else {
+                                print("Skipping conversation \(document.documentID) due to missing fields.")
+                                continue
+                            }
                             
-                            for document in documents {
-                                guard let matchId = document.data()["participants"] as? [String],
-                                      let lastUpdated = (document.data()["lastUpdated"] as? Timestamp)?.dateValue() else {
+                            let otherUserId = participants.first { $0 != currentUserId } ?? ""
+                            if otherUserId.isEmpty {
+                                print("Skipping conversation \(document.documentID) due to missing otherUserId.")
+                                continue
+                            }
+
+                            do {
+                                guard let matchedUser = try await self.getUser(userId: otherUserId) else {
+                                    print("Could not fetch user for \(otherUserId) in conversation \(document.documentID). Skipping.")
                                     continue
                                 }
                                 
-                                let otherUserId = matchId.first { $0 != currentUserId } ?? ""
-                                // Safely unwrap the match user
-                                guard let actualMatch = try await self.getUser(userId: otherUserId) else {
-                                    print("Warning: Could not fetch match profile for otherUserId: \(otherUserId) in conversation \(document.documentID). Skipping this conversation.")
-                                    // Do not 'continue' here directly as we are in a Task that is part of a loop.
-                                    // Instead, ensure this conversation isn't added if actualMatch is nil.
-                                    // The original code would have crashed if 'match' was nil and ChatConversation required non-optional.
-                                    // We will filter out conversations where actualMatch is nil later or ensure loop iteration handles this.
-                                    // For now, let's assume the 'conversations.append(conversation)' will only happen if actualMatch is valid.
-                                    // The 'continue' above was for the outer loop, this guard is inside a Task.
-                                    // Let's adjust the logic slightly to be cleaner:
-                                    return // Exit this specific Task iteration if user not found.
-                                }
-                                
                                 let messagesSnapshot = try await document.reference.collection("messages").getDocuments()
-                                let messages = messagesSnapshot.documents.compactMap { doc -> ChatMessage? in
-                                    guard let data = try? doc.data(as: ChatMessage.self) else { return nil }
-                                    return data
+                                let messages = messagesSnapshot.documents.compactMap { msgDoc -> ChatMessage? in
+                                    try? msgDoc.data(as: ChatMessage.self)
                                 }
                                 
-                                let conversation = ChatConversation(
+                                fetchedConversations.append(ChatConversation(
                                     id: document.documentID,
-                                    match: actualMatch, // Use unwrapped actualMatch
+                                    match: matchedUser,
                                     messages: messages,
                                     lastUpdated: lastUpdated
-                                )
-                                
-                                conversations.append(conversation)
-                            } // End of for document in documents (implicit)
-                            
-                            // The promise needs to be fulfilled outside the inner Task for each document,
-                            // but after all documents are processed.
-                            // The original structure had the promise fulfillment inside the Task, which is incorrect for the loop.
-                            // However, the snapshot listener provides results incrementally.
-                            // The current structure will append valid conversations and then fulfill the promise.
-                            // This part of the logic for how conversations are collected and promised needs careful review,
-                            // but the immediate fix is for 'actualMatch'.
-                            // For now, let's assume the existing promise logic handles the async additions.
-                            // The critical part is that 'actualMatch' is non-optional for ChatConversation.
-                            // We need to ensure conversations are only added if actualMatch is non-nil.
-                            // The 'return' in the guard statement above handles this for the current document's Task.
-
-                            // The original promise.success was inside the Task {}. It should be outside if it's meant to return all conversations at once.
-                            // But for a snapshot listener, it should emit whenever the data changes.
-                            // The current structure with Task.detached for each document seems complex.
-                            // Let's simplify the collection of conversations slightly for clarity if possible,
-                            // while focusing on the 'actualMatch' fix.
-                            // The fix is to ensure 'actualMatch' is non-nil before creating 'ChatConversation'.
-                            // The 'return' within the Task for a specific document handles this for that document.
-
-                            // Filter out nil matches before creating ChatConversation objects
-                            // This is a conceptual change, the actual implementation is handling it with 'guard let actualMatch' and returning from the task for that document
-
-                        } // End of outer Task
-                    } // End of addSnapshotListener closure
-                    // The promise should be handled by the snapshot listener's updates.
-                    // The original code structure for appending to 'conversations' and then calling promise.success outside the document loop (but inside the Task)
-                    // was for a single fetch. For a listener, it's different.
-                    // Let's trust the snapshot listener correctly updates 'conversations' over time.
-                    // The main point is that individual 'ChatConversation' objects are now correctly formed with non-nil 'match'.
-
-                    // Corrected structure for processing documents and fulfilling promise:
-                    // This is a larger refactor of the listener logic, focusing on the 'actualMatch' fix first.
-                    // The original code was:
-                    // Task {
-                    //   var conversations = []
-                    //   for document in documents { Task { ... conversations.append ... } }
-                    //   promise(.success(conversations)) // This is problematic due to async tasks in loop
-                    // }
-                    // A better pattern for snapshot listeners and async work inside:
-                    // Collect results of async operations and then update.
-                    let validConversations = await documents.asyncCompactMap { document -> ChatConversation? in
-                        guard let matchId = document.data()["participants"] as? [String],
-                              let lastUpdated = (document.data()["lastUpdated"] as? Timestamp)?.dateValue() else {
-                            return nil
+                                ))
+                            } catch {
+                                print("Error processing conversation \(document.documentID): \(error). Skipping.")
+                                // Optionally, if one conversation processing fails, you might want to fail the whole promise
+                                // promise(.failure(error))
+                                // return
+                                // Or, just skip this one and continue with others.
+                            }
                         }
-                        let currentUserId = self.currentUser?.id ?? "" // Re-check currentUserId, ensure it's available
-                        let otherUserId = matchId.first { $0 != currentUserId } ?? ""
-                        if otherUserId.isEmpty { return nil } // Should not happen if currentUserId is a participant
-
-                        guard let actualMatch = try? await self.getUser(userId: otherUserId) else {
-                            print("Warning: Could not fetch match profile for otherUserId: \(otherUserId) in conversation \(document.documentID). Skipping.")
-                            return nil
-                        }
-
-                        guard let messagesSnapshot = try? await document.reference.collection("messages").getDocuments() else {
-                             print("Warning: Could not fetch messages for conversation \(document.documentID). Skipping.")
-                            return nil
-                        }
-                        let messages = messagesSnapshot.documents.compactMap { doc -> ChatMessage? in
-                            try? doc.data(as: ChatMessage.self)
-                        }
-
-                        return ChatConversation(
-                            id: document.documentID,
-                            match: actualMatch,
-                            messages: messages,
-                            lastUpdated: lastUpdated
-                        )
+                        promise(.success(fetchedConversations))
                     }
-                    promise(.success(validConversations))
-
-                } // End of main Task for snapshot listener
+                }
         }
         .eraseToAnyPublisher()
     }
@@ -568,8 +498,13 @@ class FirebaseService {
                             
                             // Mark match as not new
                             try await document.reference.updateData(["isNew": false])
-                            
-                            promise(.success(match))
+                            // Ensure 'match' is non-nil before calling promise.success
+                            if let validMatch = match {
+                                promise(.success(validMatch))
+                            } else {
+                                // If match became nil after fetching (e.g. user deleted during fetch)
+                                promise(.success(nil))
+                            }
                         } catch {
                             promise(.failure(error))
                         }

@@ -11,6 +11,7 @@ struct ProfileView: View {
     @State private var showingAnalytics = false
     @State private var showingVerification = false
     
+    @MainActor // Mark initializer as @MainActor
     init(viewModel: ProfileViewModel = ProfileViewModel()) {
         _viewModel = StateObject(wrappedValue: viewModel)
     }

@@ -16,7 +16,7 @@ final class ProfileViewModel: BaseViewModel {
     
     // MARK: - Private Properties
     private let firebaseService = FirebaseService.shared
-    private var cancellables = Set<AnyCancellable>()
+    // private var cancellables = Set<AnyCancellable>() // Removed to use BaseViewModel's cancellables
     private var currentTask: Task<Void, Never>?
     
     // MARK: - Initialization

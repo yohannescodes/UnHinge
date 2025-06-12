@@ -500,7 +500,7 @@ struct AnalyticsView: View {
             return "\(hours)h \(remainingMinutes)m"
         }
     }
-}
+
 
 // MARK: - Verification View
 struct VerificationView: View {

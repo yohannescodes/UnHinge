@@ -15,8 +15,7 @@ final class FirebaseManager {
     
     // MARK: - Authentication Methods
     func signInWithApple() async throws -> AuthDataResult {
-        // TODO: Implement Apple Sign In
-        throw NSError(domain: "FirebaseManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Apple Sign In not implemented"])
+        try await FirebaseService.shared.signInWithApple()
     }
     
     func signInWithEmail(email: String, password: String) async throws -> AuthDataResult {

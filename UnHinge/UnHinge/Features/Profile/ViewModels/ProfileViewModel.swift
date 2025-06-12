@@ -8,10 +8,11 @@ import Combine
 @MainActor
 final class ProfileViewModel: BaseViewModel {
     // MARK: - Published Properties
-    @Published var currentUser: User?
+    @Published var currentUser: User? // Assuming User is similar to AppUser and has memeDeck
     @Published var currentProfile: UserProfile?
     @Published var isUploadingImage = false
     @Published var isVerifying = false
+    @Published var showingAddMemeView = false // Added for controlling the new view
     
     // MARK: - Private Properties
     private let firebaseService = FirebaseService.shared
@@ -31,6 +32,59 @@ final class ProfileViewModel: BaseViewModel {
     }
     
     // MARK: - Public Methods
+
+    func addMemeToDeck(image: UIImage, tagsInput: String) {
+        guard let userId = Auth.auth().currentUser?.uid else {
+            handleError(NSError(domain: "ProfileViewModel", code: -1, userInfo: [NSLocalizedDescriptionKey: "User not logged in."]))
+            return
+        }
+
+        let parsedTags = tagsInput.split(separator: ",")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+
+        performTask { [weak self] in
+            guard let self = self else { return }
+
+            // 1. Upload the meme to the global collection
+            let newMeme = try await self.firebaseService.uploadMeme(
+                image: image,
+                caption: "", // Caption is empty as per requirements
+                tags: parsedTags,
+                userId: userId
+            )
+
+            // 2. Add the uploaded meme's reference to the user's meme deck
+            try await self.firebaseService.addMemeToDeck(userId: userId, meme: newMeme)
+
+            // 3. Refresh current user data to reflect the new meme in the deck
+            // This might involve re-fetching the user or updating the local currentUser object
+            // For simplicity, let's call loadCurrentUser() which should re-fetch.
+            await self.loadCurrentUser()
+
+            // Optionally, dismiss the AddMemeToDeckView by setting showingAddMemeView to false
+            // This assumes the view dismissal is handled here upon success.
+            // If AddMemeToDeckView handles its own dismissal on success based on viewModel.errorMessage == nil,
+            // then this line might not be needed or could be a delegate call.
+            // self.showingAddMemeView = false
+        }
+    }
+
+    func removeMemeFromDeck(memeId: String) {
+        guard let userId = Auth.auth().currentUser?.uid else {
+            handleError(NSError(domain: "ProfileViewModel", code: -1, userInfo: [NSLocalizedDescriptionKey: "User not logged in."]))
+            return
+        }
+
+        performTask { [weak self] in
+            guard let self = self else { return }
+
+            try await self.firebaseService.removeMemeFromDeck(userId: userId, memeId: memeId)
+
+            // Refresh current user data to reflect the updated meme deck
+            await self.loadCurrentUser()
+        }
+    }
     
     func loadCurrentUser() {
         currentTask?.cancel()

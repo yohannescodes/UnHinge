@@ -29,12 +29,28 @@ struct ProfileView: View {
                             showingEditProfile: $showingEditProfile,
                             showingAnalytics: $showingAnalytics,
                             showingSettings: $showingSettings,
-                            showingDeleteConfirmation: $showingDeleteConfirmation
+                            showingDeleteConfirmation: $showingDeleteConfirmation,
+                            // Pass binding for the new sheet
+                            showingAddMemeView: $viewModel.showingAddMemeView
                         )
+
+                        // Add MemeDeckView here
+                        if let user = viewModel.currentUser, let memeDeck = user.memeDeck {
+                            MemeDeckView(memes: memeDeck, onDelete: { memeId in
+                                viewModel.removeMemeFromDeck(memeId: memeId)
+                            })
+                        } else if viewModel.currentUser != nil { // User loaded, but no meme deck or empty
+                            MemeDeckView(memes: [], onDelete: { _ in }) // Show empty state
+                        }
                     }
                 }
             }
             .navigationTitle("Profile")
+            .sheet(isPresented: $viewModel.showingAddMemeView) { // Use viewModel's published property
+                // Ensure AddMemeToDeckView can accept ProfileViewModel
+                // The created AddMemeToDeckView expects an @ObservedObject var viewModel: ProfileViewModel
+                AddMemeToDeckView(viewModel: viewModel)
+            }
             .sheet(isPresented: $showingEditProfile) {
                 if let user = viewModel.currentUser {
                     EditProfileView(user: user)
@@ -71,6 +87,69 @@ struct ProfileView: View {
         }
     }
 }
+
+// MARK: - Meme Deck View
+private struct MemeDeckView: View {
+    let memes: [Meme] // Assuming Meme struct has id and imageName
+    let onDelete: (String) -> Void
+
+    private let columns: [GridItem] = [
+        GridItem(.flexible(), spacing: 8),
+        GridItem(.flexible(), spacing: 8)
+    ]
+
+    var body: some View {
+        VStack(alignment: .leading) {
+            Text("My Meme Deck (\(memes.count))")
+                .font(.title2)
+                .bold()
+                .padding(.horizontal)
+
+            if memes.isEmpty {
+                Text("Your meme deck is empty. Add some memes!")
+                    .foregroundColor(.secondary)
+                    .padding()
+                    .frame(maxWidth: .infinity, alignment: .center)
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    LazyHGrid(rows: columns, spacing: 8) {
+                        ForEach(memes) { meme in
+                            ZStack(alignment: .topTrailing) {
+                                AsyncImage(url: URL(string: meme.imageName)) { image in
+                                    image.resizable()
+                                        .aspectRatio(contentMode: .fill)
+                                } placeholder: {
+                                    Rectangle()
+                                        .fill(Color.gray.opacity(0.3))
+                                        .overlay(ProgressView())
+                                }
+                                .frame(width: 150, height: 150)
+                                .cornerRadius(8)
+                                .clipped()
+
+                                Button(action: {
+                                    onDelete(meme.id)
+                                }) {
+                                    Image(systemName: "trash.circle.fill")
+                                        .font(.title2)
+                                        .foregroundColor(.red)
+                                        .padding(6)
+                                        .background(Color.black.opacity(0.6))
+                                        .clipShape(Circle())
+                                }
+                                .padding(4)
+                            }
+                        }
+                    }
+                    .padding(.horizontal)
+                }
+                .frame(height: 316) // Approx 2 rows of 150 + spacing
+            }
+        }
+        .padding(.vertical)
+    }
+}
+
 
 // MARK: - Edit Profile View
 struct EditProfileView: View {
@@ -445,9 +524,20 @@ private struct ProfileActionsView: View {
     @Binding var showingAnalytics: Bool
     @Binding var showingSettings: Bool
     @Binding var showingDeleteConfirmation: Bool
-    
+    @Binding var showingAddMemeView: Bool // Added binding
+
     var body: some View {
         VStack(spacing: 12) {
+            Button(action: { showingAddMemeView = true }) { // Action for the new button
+                Text("Add Meme to Deck")
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.green) // Different color for distinction
+                    .cornerRadius(10)
+            }
+
             Button(action: { showingEditProfile = true }) {
                 Text("Edit Profile")
                     .font(.headline)

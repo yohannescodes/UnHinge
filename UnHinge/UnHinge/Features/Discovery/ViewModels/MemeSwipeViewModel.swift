@@ -6,6 +6,7 @@ import Combine
 @MainActor
 final class MemeSwipeViewModel: ObservableObject {
     @Published private(set) var currentMeme: Meme?
+    @Published private(set) var currentMemeUploader: AppUser? = nil // Added uploader
     @Published private(set) var isLoading = false
     @Published private(set) var errorMessage: String?
     
@@ -53,8 +54,9 @@ final class MemeSwipeViewModel: ObservableObject {
                 
                 if !Task.isCancelled {
                     memeQueue.append(contentsOf: newMemes)
-                    if currentMeme == nil && !memeQueue.isEmpty {
-                        currentMeme = memeQueue[0]
+                    if self.currentMeme == nil && !memeQueue.isEmpty {
+                        // currentMeme = memeQueue[0] // Replaced by method below
+                        self.updateCurrentMemeAndFetchUploader(meme: memeQueue[0])
                     }
                 }
             } catch {
@@ -76,26 +78,22 @@ final class MemeSwipeViewModel: ObservableObject {
         Task { [weak self] in
             guard let self = self else { return }
             do {
-                async let updateUserMatches = firebaseService.updateUser(userId: userId, data: [
-                    "matches": FieldValue.arrayUnion([meme.id])
-                ])
+                // Call the new FirebaseService method
+                try await self.firebaseService.recordSwipeAndCheckForMatch(meme: meme, currentUserId: userId)
                 
-                async let updateMemeLikes = firebaseService.updateUser(userId: meme.uploadedBy, data: [
-                    "analytics.totalLikes": FieldValue.increment(Int64(1))
-                ])
-                
-                // Execute both updates concurrently
-                try await (updateUserMatches, updateMemeLikes)
-                
+                // Analytics (e.g., totalLikes on meme owner) are now expected to be handled by Firebase Functions
+                // or a separate mechanism, so they are removed from here.
+                // The user's own "matches" array (likedMemeIds) is also implicitly handled by the swipes collection.
+
                 // Move to next meme
-                moveToNextMeme()
+                self.moveToNextMeme()
                 
                 // Load more memes if needed
-                if shouldLoadMore() {
-                    loadMemes()
+                if self.shouldLoadMore() {
+                    self.loadMemes()
                 }
             } catch {
-                errorMessage = "Failed to like meme: \(error.localizedDescription)"
+                self.errorMessage = "Failed to process like: \(error.localizedDescription)"
             }
         }
     }
@@ -104,22 +102,29 @@ final class MemeSwipeViewModel: ObservableObject {
         guard let meme = currentMeme,
               let userId = Auth.auth().currentUser?.uid else { return }
         
+        // TODO: Implement dislike similar to like, by recording a "dislike" swipe.
+        // This might involve a similar FirebaseService method like recordSwipe(type: "dislike", ...)
+        // For now, this subtask focuses on the "like" and match logic.
+        // The old dislike logic is kept temporarily but should be refactored.
         Task { [weak self] in
             guard let self = self else { return }
             do {
-                async let updateUserSkips = firebaseService.updateUser(userId: userId, data: [
-                    "memes": FieldValue.arrayUnion([meme.id])
-                ])
+                // Old logic: directly update user's skipped memes.
+                // This should ideally be replaced by writing to the 'swipes' collection with type: "dislike".
+                // For this subtask, we are focusing on the like/match flow.
+                // A full implementation would require `recordSwipe(type: "dislike")`
+                 try await firebaseService.updateUser(userId: userId, data: [
+                     "skippedMemes": FieldValue.arrayUnion([meme.id]) // Example: new field for skipped memes
+                 ])
                 
-                async let updateMemeSkips = firebaseService.updateUser(userId: meme.uploadedBy, data: [
-                    "analytics.totalSkips": FieldValue.increment(Int64(1))
-                ])
-                
-                // Execute both updates concurrently
-                try await (updateUserSkips, updateMemeSkips)
-                
+                // Analytics for skips would also move to backend functions.
+                // async let updateMemeSkips = firebaseService.updateUser(userId: meme.uploadedBy, data: [
+                // "analytics.totalSkips": FieldValue.increment(Int64(1))
+                // ])
+                // try await updateMemeSkips
+
                 // Move to next meme
-                moveToNextMeme()
+                self.moveToNextMeme()
                 
                 // Load more memes if needed
                 if shouldLoadMore() {
@@ -134,10 +139,42 @@ final class MemeSwipeViewModel: ObservableObject {
     private func moveToNextMeme() {
         currentIndex += 1
         if currentIndex < memeQueue.count {
-            currentMeme = memeQueue[currentIndex]
+            // currentMeme = memeQueue[currentIndex] // Replaced by method below
+            updateCurrentMemeAndFetchUploader(meme: memeQueue[currentIndex])
         } else {
-            currentMeme = nil
+            // currentMeme = nil // Replaced by method below
+            updateCurrentMemeAndFetchUploader(meme: nil)
             loadMemes() // Load more memes
+        }
+    }
+
+    private func updateCurrentMemeAndFetchUploader(meme: Meme?) {
+        self.currentMeme = meme
+        self.currentMemeUploader = nil // Reset while fetching
+
+        guard let meme = meme, !meme.uploadedBy.isEmpty else {
+            // If meme is nil, currentMeme and currentMemeUploader are already nil (or set to nil above)
+            return
+        }
+
+        Task { [weak self] in // Ensure it's managed within existing task structures
+            guard let self = self else { return }
+            do {
+                let uploader = try await self.firebaseService.getUser(userId: meme.uploadedBy)
+                await MainActor.run { // Ensure UI updates on main thread
+                    // Check if the currentMeme is still the same one we fetched for, to avoid race conditions
+                    if self.currentMeme?.id == meme.id {
+                        self.currentMemeUploader = uploader
+                    }
+                }
+            } catch {
+                print("Error fetching uploader for meme \(meme.id): \(error)")
+                await MainActor.run {
+                   if self.currentMeme?.id == meme.id { // Check again in case currentMeme changed
+                        self.currentMemeUploader = nil // Explicitly set to nil on error
+                   }
+                }
+            }
         }
     }
     

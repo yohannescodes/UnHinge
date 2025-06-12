@@ -4,7 +4,7 @@ import Charts
 import UIKit
 import FirebaseAuth // For Auth.auth().signOut() in SettingsView
 
-struct ProfileView: View {
+@MainActor struct ProfileView: View {
     @StateObject private var viewModel: ProfileViewModel
     @State private var showingEditProfile = false
     @State private var showingSettings = false
@@ -12,8 +12,7 @@ struct ProfileView: View {
     @State private var showingAnalytics = false
     @State private var showingVerification = false
     
-    @MainActor // Mark initializer as @MainActor
-    init(viewModel: ProfileViewModel = ProfileViewModel()) {
+    @MainActor init(viewModel: ProfileViewModel = ProfileViewModel()) {
         _viewModel = StateObject(wrappedValue: viewModel)
     }
     
@@ -40,7 +39,7 @@ struct ProfileView: View {
                         if let user = viewModel.currentUser {
                             // user.memeDeck is non-optional [Meme]
                             // MemeDeckView expects [Meme], so direct pass is fine.
-                            // The error "Initializer for conditional binding must have Optional type, not '[Meme]'"
+                            // The error "Initializer for conditional binding must have Optional type, not '[Meme]'" 
                             // must be from somewhere else if this line (39 in original error report) was the target.
                             // Assuming the error was indeed for a construct like `if let x = nonOptionalArray`.
                             // The current structure `if let user = viewModel.currentUser` is correct.
@@ -300,7 +299,7 @@ struct SettingsView: View {
     @State private var showMe = true
     @State private var minAge = 18
     @State private var maxAge = 99
-    @State private var maxDistance = 50
+    @State private var maxDistance: Double = 50
     @State private var theme: AppTheme = .system
     @State private var language = "English"
     @State private var notifications = AppUser.NotificationPreferences(
@@ -330,7 +329,7 @@ struct SettingsView: View {
                     }
                     
                     VStack(alignment: .leading) {
-                        Text("Maximum Distance: \(maxDistance) miles")
+                        Text("Maximum Distance: \(Int(maxDistance)) miles")
                         Slider(value: $maxDistance, in: 1...100, step: 1)
                     }
                 }
@@ -486,7 +485,7 @@ struct AnalyticsView: View {
             return "\(hours)h \(remainingMinutes)m"
         }
     }
-}
+
 
 // MARK: - Verification View
 struct VerificationView: View {
@@ -627,3 +626,4 @@ struct RangeSlider: View {
         )
     }
 } 
+

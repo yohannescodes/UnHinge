@@ -28,7 +28,9 @@ final class ProfileViewModel: BaseViewModel {
     
     deinit {
         currentTask?.cancel()
-        cancellables.forEach { $0.cancel() }
+        // Removed: cancellables.forEach { $0.cancel() }
+        // TODO: Consider moving Combine subscription cancellation to view lifecycle methods (e.g., onDisappear)
+        // or implement a specific cleanup method in BaseViewModel to be called explicitly on the main actor.
     }
     
     // MARK: - Public Methods

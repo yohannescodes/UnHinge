@@ -312,8 +312,8 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     
     @State private var showMe = true
-    @State private var minAge = 18
-    @State private var maxAge = 99
+    @State private var minAge: Double = 18.0 // Changed to Double
+    @State private var maxAge: Double = 99.0 // Changed to Double
     @State private var maxDistance = 50
     @State private var theme: AppTheme = .system
     @State private var language = "English"
@@ -338,9 +338,9 @@ struct SettingsView: View {
                     Toggle("Show Me", isOn: $showMe)
                     
                     VStack(alignment: .leading) {
-                        Text("Age Range: \(minAge)-\(maxAge)")
-                        RangeSlider(value: $minAge, in: 18...99, step: 1)
-                        RangeSlider(value: $maxAge, in: 18...99, step: 1)
+                        Text("Age Range: \(Int(minAge))-\(Int(maxAge))") // Display as Int
+                        RangeSlider(value: $minAge, in: 18.0...99.0, step: 1.0) // Use Double values
+                        RangeSlider(value: $maxAge, in: 18.0...99.0, step: 1.0) // Use Double values
                     }
                     
                     VStack(alignment: .leading) {
@@ -500,7 +500,7 @@ struct AnalyticsView: View {
             return "\(hours)h \(remainingMinutes)m"
         }
     }
-
+}
 
 // MARK: - Verification View
 struct VerificationView: View {
@@ -613,47 +613,28 @@ private struct ProfileActionsView: View {
 }
 
 // MARK: - Range Slider
-struct RangeSlider: View {
-    @Binding var value: Int
-    let range: ClosedRange<Int>
-    let step: Int
-    
-    init(value: Binding<Int>, in range: ClosedRange<Int>, step: Int = 1) {
+struct RangeSlider<V>: View where V: BinaryFloatingPoint, V.Stride: BinaryFloatingPoint {
+    @Binding var value: V
+    let range: ClosedRange<V>
+    let step: V.Stride // V.Stride is the type for step when V is BinaryFloatingPoint
+
+    init(value: Binding<V>, in range: ClosedRange<V>, step: V.Stride) {
         self._value = value
         self.range = range
         self.step = step
     }
-    
+
     var body: some View {
-        // Explicitly create bindings and range for clarity and type safety
-        let doubleBinding = Binding<Double>(
-            get: { Double(self.value) },
-            set: { self.value = Int($0) }
-        )
-        let doubleRange = Double(self.range.lowerBound)...Double(self.range.upperBound)
-        let doubleStep = Double(self.step)
-
-        let valueProxy = Binding<Double>(
-            get: { Double(self.value) },
-            set: { self.value = Int($0.rounded()) } // Added .rounded() for robustness
-        )
-        let lowerBoundProxy = Double(self.range.lowerBound)
-        let upperBoundProxy = Double(self.range.upperBound)
-        let stepProxy = Double(self.step)
-
-        // Use a more explicit Slider initializer to guide type inference
         Slider(
-            value: valueProxy,
-            in: lowerBoundProxy...upperBoundProxy,
-            step: stepProxy,
-            onEditingChanged: { _ in
-                // No action needed on editing changed for this specific case
-            },
-            minimumValueLabel: Text(String(format: "%.0f", lowerBoundProxy)),
-            maximumValueLabel: Text(String(format: "%.0f", upperBoundProxy)),
-            label: {
-                EmptyView() // No central label needed for this RangeSlider usage
-            }
+            value: self.$value, // Use the binding directly
+            in: self.range,
+            step: self.step,
+            onEditingChanged: { _ in }
+            // Using a simpler Slider init first. If errors persist, can try the one with labels.
+            // If the more explicit one is still needed:
+            // minimumValueLabel: Text(String(describing: range.lowerBound)),
+            // maximumValueLabel: Text(String(describing: range.upperBound)),
+            // label: { EmptyView() }
         )
     }
-} 
+}

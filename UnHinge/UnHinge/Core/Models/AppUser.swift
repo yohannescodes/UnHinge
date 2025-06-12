@@ -9,7 +9,7 @@ public enum AppTheme: String, Codable, CaseIterable {
     case system
 }
 
-public struct AppUser: Codable, Identifiable {
+public struct AppUser: Codable, Identifiable, Equatable { // Added Equatable
     public let id: String
     public let email: String
     public var name: String
@@ -141,6 +141,11 @@ public struct AppUser: Codable, Identifiable {
         self.preferences = preferences
         self.socialLinks = socialLinks
         self.analytics = analytics
+    }
+
+    // Equatable conformance
+    public static func == (lhs: AppUser, rhs: AppUser) -> Bool {
+        return lhs.id == rhs.id
     }
 }
 

@@ -52,14 +52,6 @@ struct ProfileView: View {
 
                         // Add MemeDeckView here
                         if let user = viewModel.currentUser {
-                            // user.memeDeck is non-optional [Meme]
-                            // MemeDeckView expects [Meme], so direct pass is fine.
-                            // The error "Initializer for conditional binding must have Optional type, not '[Meme]'"
-                            // must be from somewhere else if this line (39 in original error report) was the target.
-                            // Assuming the error was indeed for a construct like `if let x = nonOptionalArray`.
-                            // The current structure `if let user = viewModel.currentUser` is correct.
-                            // If `user.memeDeck` itself was being conditionally bound, that would be an error.
-                            // For now, this line is correct as `user.memeDeck` is passed directly.
                             MemeDeckView(memes: user.memeDeck, onDelete: { memeId in
                                 viewModel.removeMemeFromDeck(memeId: memeId)
                             })
@@ -69,8 +61,6 @@ struct ProfileView: View {
             }
             .navigationTitle("Profile")
             .sheet(isPresented: $viewModel.showingAddMemeView) { // Use viewModel's published property
-                // Ensure AddMemeToDeckView can accept ProfileViewModel
-                // The created AddMemeToDeckView expects an @ObservedObject var viewModel: ProfileViewModel
                 AddMemeToDeckView(viewModel: viewModel)
             }
             .sheet(isPresented: $showingEditProfile) {
@@ -112,7 +102,7 @@ struct ProfileView: View {
 
 // MARK: - Meme Deck View
 private struct MemeDeckView: View {
-    let memes: [Meme] // Assuming Meme struct has id and imageName
+    let memes: [Meme]
     let onDelete: (String) -> Void
 
     private let columns: [GridItem] = [
@@ -165,7 +155,7 @@ private struct MemeDeckView: View {
                     }
                     .padding(.horizontal)
                 }
-                .frame(height: 316) // Approx 2 rows of 150 + spacing
+                .frame(height: 316)
             }
         }
         .padding(.vertical)
@@ -312,8 +302,8 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     
     @State private var showMe = true
-    @State private var minAge: Double = 18.0 // Changed to Double
-    @State private var maxAge: Double = 99.0 // Changed to Double
+    @State private var minAge: Double = 18.0
+    @State private var maxAge: Double = 99.0
     @State private var maxDistance = 50
     @State private var theme: AppTheme = .system
     @State private var language = "English"
@@ -338,9 +328,9 @@ struct SettingsView: View {
                     Toggle("Show Me", isOn: $showMe)
                     
                     VStack(alignment: .leading) {
-                        Text("Age Range: \(Int(minAge))-\(Int(maxAge))") // Display as Int
-                        RangeSlider(value: $minAge, in: 18.0...99.0, step: 1.0) // Use Double values
-                        RangeSlider(value: $maxAge, in: 18.0...99.0, step: 1.0) // Use Double values
+                        Text("Age Range: \(Int(minAge))-\(Int(maxAge))")
+                        RangeSlider(value: $minAge, in: 18.0...99.0, step: 1.0)
+                        RangeSlider(value: $maxAge, in: 18.0...99.0, step: 1.0)
                     }
                     
                     VStack(alignment: .leading) {
@@ -414,15 +404,12 @@ struct AnalyticsView: View {
         NavigationView {
             ScrollView {
                 VStack(spacing: 20) {
-                    // user.analytics is non-optional UserAnalytics. No need for if-let.
                     let analytics = user.analytics
-                    // Profile Stats
                     VStack(spacing: 16) {
                         Text("Profile Stats")
                                 .font(.headline)
                             
                             HStack(spacing: 20) {
-                                // Corrected UserAnalytics fields
                                 StatView(title: "Total Swipes", value: String(analytics.totalSwipes))
                                 StatView(title: "Memes Shared", value: String(analytics.memesShared))
                                 StatView(title: "Matches", value: String(analytics.matches))
@@ -433,21 +420,12 @@ struct AnalyticsView: View {
                         .cornerRadius(10)
                         .shadow(radius: 2)
                         
-                        // Match Stats - Assuming these fields exist or removing/commenting them if not
-                        // For now, focusing on the reported errors. If matchRate, responseRate, averageResponseTime
-                        // are not in UserAnalytics, they would also cause errors.
-                        // AppUser.UserAnalytics confirmed: activeHours, totalSwipes, matches, messagesSent, memesShared.
-                        // So, Match Stats section as it is will mostly error out.
-                        // Let's comment out the problematic StatViews in Match Stats for now to allow build.
                         VStack(spacing: 16) {
                             Text("Match Stats")
                                 .font(.headline)
                             
                             HStack(spacing: 20) {
-                                // StatView(title: "Match Rate", value: String(format: "%.1f%%", analytics.matchRate * 100))
-                                // StatView(title: "Response Rate", value: String(format: "%.1f%%", analytics.responseRate * 100))
-                                // StatView(title: "Avg Response", value: formatTimeInterval(analytics.averageResponseTime))
-                                StatView(title: "Messages Sent", value: String(analytics.messagesSent)) // Using an available stat
+                                StatView(title: "Messages Sent", value: String(analytics.messagesSent))
                             }
                         }
                         .padding()
@@ -455,7 +433,6 @@ struct AnalyticsView: View {
                         .cornerRadius(10)
                         .shadow(radius: 2)
                         
-                        // Activity Chart
                         VStack(spacing: 16) {
                             Text("Activity Hours")
                                 .font(.headline)
@@ -554,17 +531,17 @@ private struct ProfileActionsView: View {
     @Binding var showingAnalytics: Bool
     @Binding var showingSettings: Bool
     @Binding var showingDeleteConfirmation: Bool
-    @Binding var showingAddMemeView: Bool // Added binding
+    @Binding var showingAddMemeView: Bool
 
     var body: some View {
         VStack(spacing: 12) {
-            Button(action: { showingAddMemeView = true }) { // Action for the new button
+            Button(action: { showingAddMemeView = true }) {
                 Text("Add Meme to Deck")
                     .font(.headline)
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
                     .padding()
-                    .background(Color.green) // Different color for distinction
+                    .background(Color.green)
                     .cornerRadius(10)
             }
 
@@ -616,7 +593,7 @@ private struct ProfileActionsView: View {
 struct RangeSlider<V>: View where V: BinaryFloatingPoint, V.Stride: BinaryFloatingPoint {
     @Binding var value: V
     let range: ClosedRange<V>
-    let step: V.Stride // V.Stride is the type for step when V is BinaryFloatingPoint
+    let step: V.Stride
 
     init(value: Binding<V>, in range: ClosedRange<V>, step: V.Stride) {
         self._value = value
@@ -626,15 +603,12 @@ struct RangeSlider<V>: View where V: BinaryFloatingPoint, V.Stride: BinaryFloati
 
     var body: some View {
         Slider(
-            value: self.$value, // Use the binding directly
+            value: self.$value,
             in: self.range,
             step: self.step,
             onEditingChanged: { _ in }
-            // Using a simpler Slider init first. If errors persist, can try the one with labels.
-            // If the more explicit one is still needed:
-            // minimumValueLabel: Text(String(describing: range.lowerBound)),
-            // maximumValueLabel: Text(String(describing: range.upperBound)),
-            // label: { EmptyView() }
         )
     }
 }
+// NOTE: Removed the erroneous comment line that was here in the previous file content.
+// If there was an actual extraneous brace, it should be gone now by providing the full correct content.

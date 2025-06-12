@@ -54,7 +54,7 @@ struct ProfileView: View {
                         if let user = viewModel.currentUser {
                             // user.memeDeck is non-optional [Meme]
                             // MemeDeckView expects [Meme], so direct pass is fine.
-                            // The error "Initializer for conditional binding must have Optional type, not '[Meme]'" 
+                            // The error "Initializer for conditional binding must have Optional type, not '[Meme]'"
                             // must be from somewhere else if this line (39 in original error report) was the target.
                             // Assuming the error was indeed for a construct like `if let x = nonOptionalArray`.
                             // The current structure `if let user = viewModel.currentUser` is correct.
@@ -500,7 +500,7 @@ struct AnalyticsView: View {
             return "\(hours)h \(remainingMinutes)m"
         }
     }
-
+}
 
 // MARK: - Verification View
 struct VerificationView: View {
@@ -633,11 +633,27 @@ struct RangeSlider: View {
         let doubleRange = Double(self.range.lowerBound)...Double(self.range.upperBound)
         let doubleStep = Double(self.step)
 
+        let valueProxy = Binding<Double>(
+            get: { Double(self.value) },
+            set: { self.value = Int($0.rounded()) } // Added .rounded() for robustness
+        )
+        let lowerBoundProxy = Double(self.range.lowerBound)
+        let upperBoundProxy = Double(self.range.upperBound)
+        let stepProxy = Double(self.step)
+
+        // Use a more explicit Slider initializer to guide type inference
         Slider(
-            value: doubleBinding,
-            in: doubleRange,
-            step: doubleStep,
-            onEditingChanged: { _ in } // Added onEditingChanged
+            value: valueProxy,
+            in: lowerBoundProxy...upperBoundProxy,
+            step: stepProxy,
+            onEditingChanged: { _ in
+                // No action needed on editing changed for this specific case
+            },
+            minimumValueLabel: Text(String(format: "%.0f", lowerBoundProxy)),
+            maximumValueLabel: Text(String(format: "%.0f", upperBoundProxy)),
+            label: {
+                EmptyView() // No central label needed for this RangeSlider usage
+            }
         )
     }
 } 

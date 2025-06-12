@@ -34,10 +34,10 @@ final class MemeSwipeViewModel: ObservableObject {
                     throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Please sign in to continue"])
                 }
                 
-                // Get user's liked and skipped memes
-                let user = try await firebaseService.getUser(userId: userId)
-                let likedMemeIds = user?.matches ?? []
-                let skippedMemeIds = user?.memes?.compactMap { $0.id } ?? []
+                // Get user's liked and skipped memes from Firestore directly
+                let userDoc = try await Firestore.firestore().collection("users").document(userId).getDocument()
+                let likedMemeIds = userDoc.data()?["likedMemes"] as? [String] ?? []
+                let skippedMemeIds = userDoc.data()?["skippedMemes"] as? [String] ?? []
                 
                 // Query memes not in liked or skipped
                 let db = Firestore.firestore()

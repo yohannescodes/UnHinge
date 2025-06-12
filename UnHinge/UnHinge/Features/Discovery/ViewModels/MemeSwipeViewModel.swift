@@ -36,11 +36,10 @@ final class MemeSwipeViewModel: ObservableObject {
                 
                 // Get user's liked and skipped memes
                 let user = try await firebaseService.getUser(userId: userId)
-                // TODO: Properly fetch liked meme IDs from a 'swipes' or 'likes' collection.
-                let likedMemeIds: [String] = [] // No field for liked meme IDs in AppUser
-                let skippedMemeIds = user?.memeDeck.map { $0.id } ?? [] // User's own uploaded memes
+                let likedMemeIds = user?.matches ?? []
+                let skippedMemeIds = user?.memes?.compactMap { $0.id } ?? []
                 
-                // Query memes not in liked or skipped (uploaded or already liked)
+                // Query memes not in liked or skipped
                 let db = Firestore.firestore()
                 let query = db.collection("memes")
                     .whereField("uploadedBy", isNotEqualTo: userId)
@@ -184,4 +183,3 @@ final class MemeSwipeViewModel: ObservableObject {
         return memeQueue.count - currentIndex <= loadMoreThreshold
     }
 } 
-

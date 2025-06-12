@@ -9,7 +9,7 @@ public enum AppTheme: String, Codable, CaseIterable {
     case system
 }
 
-public struct AppUser: Codable, Identifiable, Equatable {
+public struct AppUser: Codable, Identifiable {
     public let id: String
     public let email: String
     public var name: String
@@ -142,11 +142,6 @@ public struct AppUser: Codable, Identifiable, Equatable {
         self.socialLinks = socialLinks
         self.analytics = analytics
     }
-    
-    public static func == (lhs: AppUser, rhs: AppUser) -> Bool {
-        lhs.id == rhs.id
-    }
-    // This makes AppUser conform to Equatable by comparing IDs, which is typical for user models.
 }
 
 // MARK: - Firestore Conversion
@@ -168,4 +163,4 @@ extension AppUser {
         }
         self = user
     }
-} 
+}

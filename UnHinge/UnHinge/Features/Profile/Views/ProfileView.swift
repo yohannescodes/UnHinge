@@ -345,7 +345,7 @@ struct SettingsView: View {
                     
                     VStack(alignment: .leading) {
                         Text("Maximum Distance: \(maxDistance) miles")
-//                        Slider(value: $maxDistance, in: 1...100, step: 1)
+                        Slider(value: $maxDistance, in: 1...100, step: 1)
                     }
                 }
                 
@@ -500,7 +500,7 @@ struct AnalyticsView: View {
             return "\(hours)h \(remainingMinutes)m"
         }
     }
-
+}
 
 // MARK: - Verification View
 struct VerificationView: View {

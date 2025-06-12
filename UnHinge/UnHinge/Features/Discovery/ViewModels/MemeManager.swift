@@ -109,12 +109,12 @@ final class MemeManager: ObservableObject {
                 // Create meme document in Firestore
                 let meme = Meme(
                     id: UUID().uuidString,
-                    imageName: downloadURL.absoluteString,
-                    tags: [],
+                    imageUrl: downloadURL.absoluteString,
+                    caption: caption,
                     uploadedBy: userId,
                     uploadedAt: Date(),
                     likes: 0,
-                    views: 0
+                    skips: 0
                 )
                 
                 do {

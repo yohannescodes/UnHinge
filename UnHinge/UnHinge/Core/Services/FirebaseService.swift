@@ -548,3 +548,33 @@ class FirebaseService {
         .eraseToAnyPublisher()
     }
 } 
+
+class PresentationContextProvider: NSObject, ASAuthorizationControllerPresentationContextProviding {
+    private let anchor: UIWindow
+
+    init(presentationAnchor: UIWindow) {
+        self.anchor = presentationAnchor
+    }
+
+    func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
+        return anchor
+    }
+}
+
+class AppleSignInAuthDelegate: NSObject, ASAuthorizationControllerDelegate {
+    let nonce: String
+    let onCompletion: (ASAuthorizationCredential?, Error?) -> Void
+    
+    init(nonce: String, onCompletion: @escaping (ASAuthorizationCredential?, Error?) -> Void) {
+        self.nonce = nonce
+        self.onCompletion = onCompletion
+    }
+    
+    func authorizationController(_ controller: ASAuthorizationController, didCompleteWithAuthorization authorization: ASAuthorization) {
+        onCompletion(authorization.credential, nil)
+    }
+    
+    func authorizationController(_ controller: ASAuthorizationController, didCompleteWithError error: Error) {
+        onCompletion(nil, error)
+    }
+}

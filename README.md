@@ -4,7 +4,7 @@
 
 **UnHinge** is a bold, irreverent dating platform that lets users swipe based on **memes** instead of profile photos. Whether original or reposted, memes are the vibe-check tool that helps people connect through humor, relatability, and shared internet culture.
 
-Built with 💻 Xcode 26 (Developer Beta) · 🎯 Swift 5 · ❤️ SwiftUI · ☁️ Firebas
+Built with 💻 Xcode 26 (Developer Beta) · 🎯 Swift 5 · ❤️ SwiftUI · ☁️ Firebase
 
 ---
 

@@ -8,6 +8,8 @@ struct AddMemeToDeckView: View {
     @State private var selectedImage: UIImage?
     @State private var tagsString: String = ""
     @State private var showImagePicker: Bool = false
+    @State private var showAlert: Bool = false
+    @State private var alertMessage: String = ""
 
     var body: some View {
         NavigationView {
@@ -22,6 +24,7 @@ struct AddMemeToDeckView: View {
                         .frame(maxHeight: 300)
                         .cornerRadius(10)
                         .onTapGesture {
+                            print("Tapped to show image picker")
                             showImagePicker = true
                         }
                 } else {
@@ -34,6 +37,7 @@ struct AddMemeToDeckView: View {
                                 .foregroundColor(.gray)
                         )
                         .onTapGesture {
+                            print("Tapped to show image picker")
                             showImagePicker = true
                         }
                 }
@@ -50,12 +54,21 @@ struct AddMemeToDeckView: View {
 
                 Button(action: {
                     guard let image = selectedImage else {
-                        viewModel.errorMessage = "Please select an image."
+                        alertMessage = "Please select an image."
+                        showAlert = true
                         return
                     }
+                    print("Attempting to upload meme...")
                     Task {
                         await viewModel.addMemeToDeck(image: image, tagsInput: tagsString)
-                        if viewModel.errorMessage == nil { // Assuming error message is nil on success
+                        if let error = viewModel.errorMessage {
+                            alertMessage = error
+                            showAlert = true
+                            print("Upload failed: \(error)")
+                        } else {
+                            alertMessage = "Meme uploaded successfully!"
+                            showAlert = true
+                            print("Upload succeeded!")
                             dismiss()
                         }
                     }
@@ -93,6 +106,9 @@ struct AddMemeToDeckView: View {
                         .background(Color.white.opacity(0.8))
                         .cornerRadius(10)
                 }
+            }
+            .alert(isPresented: $showAlert) {
+                Alert(title: Text("Notice"), message: Text(alertMessage), dismissButton: .default(Text("OK")))
             }
         }
     }

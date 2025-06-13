@@ -268,9 +268,11 @@ class FirebaseService {
     // MARK: - Meme Operations
     
     func addMemeToDeck(userId: String, meme: Meme) async throws {
+        print("Adding meme to user's memeDeck with arrayUnion...")
         try await db.collection("users").document(userId).updateData([
             "memeDeck": FieldValue.arrayUnion([try Firestore.Encoder().encode(meme)])
         ])
+        print("Successfully added meme to memeDeck.")
     }
     
     func removeMemeFromDeck(userId: String, memeId: String) async throws {
@@ -284,14 +286,19 @@ class FirebaseService {
     
     func uploadMeme(image: UIImage, caption: String, tags: [String], userId: String) async throws -> Meme {
         guard let imageData = image.jpegData(compressionQuality: 0.7) else {
+            print("Failed to prepare image data for upload.")
             throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to prepare image"])
         }
-        
+        print("Image size: \(imageData.count) bytes")
         let memeId = UUID().uuidString
         let imageRef = storage.reference().child("memes/\(memeId).jpg")
-        _ = try await imageRef.putDataAsync(imageData)
+        let metadata = StorageMetadata()
+        metadata.contentType = "image/jpeg"
+        print("Uploading image to Firebase Storage at memes/\(memeId).jpg ...")
+        _ = try await imageRef.putDataAsync(imageData, metadata: metadata)
+        print("Image uploaded. Getting download URL...")
         let url = try await imageRef.downloadURL()
-        
+        print("Download URL obtained: \(url.absoluteString)")
         let meme = Meme(
             id: memeId,
             imageName: url.absoluteString,
@@ -301,8 +308,9 @@ class FirebaseService {
             likes: 0,
             views: 0
         )
-        
+        print("Saving meme to memes collection in Firestore...")
         try await db.collection("memes").document(memeId).setData(from: meme)
+        print("Meme saved to memes collection.")
         return meme
     }
     

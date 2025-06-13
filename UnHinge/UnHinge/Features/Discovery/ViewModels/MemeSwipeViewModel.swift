@@ -33,29 +33,40 @@ final class MemeSwipeViewModel: ObservableObject {
                 guard let userId = Auth.auth().currentUser?.uid else {
                     throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Please sign in to continue"])
                 }
-                
-                // Get user's liked and skipped memes from Firestore directly
+                // Get user's gender
                 let userDoc = try await Firestore.firestore().collection("users").document(userId).getDocument()
-                let likedMemeIds = userDoc.data()?["likedMemes"] as? [String] ?? []
-                let skippedMemeIds = userDoc.data()?["skippedMemes"] as? [String] ?? []
-                
-                // Query memes not in liked or skipped
+                let myGender = userDoc.data()? ["gender"] as? String ?? "Other"
+                let likedMemeIds = userDoc.data()? ["likedMemes"] as? [String] ?? []
+                let skippedMemeIds = userDoc.data()? ["skippedMemes"] as? [String] ?? []
+                // Query users of opposite gender
+                let usersSnapshot = try await Firestore.firestore().collection("users").whereField("gender", isNotEqualTo: myGender).getDocuments()
+                let oppositeGenderUserIds = usersSnapshot.documents.compactMap { $0.documentID }
+
+                guard !oppositeGenderUserIds.isEmpty else {
+                    // No users of opposite gender, show empty state or message
+                    await MainActor.run {
+                        self.memeQueue = []
+                        self.currentMeme = nil
+                        self.currentMemeUploader = nil
+                        self.isLoading = false
+                        self.errorMessage = "No users of the opposite gender found."
+                    }
+                    return
+                }
+                // Query memes not in liked or skipped, and only from opposite gender users
                 let db = Firestore.firestore()
                 let query = db.collection("memes")
-                    .whereField("uploadedBy", isNotEqualTo: userId)
+                    .whereField("uploadedBy", in: oppositeGenderUserIds)
                     .limit(to: 20)
-                
                 let snapshot = try await query.getDocuments()
                 let newMemes = snapshot.documents.compactMap { document in
                     try? document.data(as: Meme.self)
                 }.filter { meme in
                     !likedMemeIds.contains(meme.id) && !skippedMemeIds.contains(meme.id)
                 }
-                
                 if !Task.isCancelled {
                     memeQueue.append(contentsOf: newMemes)
                     if self.currentMeme == nil && !memeQueue.isEmpty {
-                        // currentMeme = memeQueue[0] // Replaced by method below
                         self.updateCurrentMemeAndFetchUploader(meme: memeQueue[0])
                     }
                 }
@@ -64,7 +75,6 @@ final class MemeSwipeViewModel: ObservableObject {
                     errorMessage = error.localizedDescription
                 }
             }
-            
             if !Task.isCancelled {
                 isLoading = false
             }

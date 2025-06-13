@@ -293,7 +293,7 @@ struct SettingsView: View {
     
     @State private var showMe = true
     @State private var minAge: Double = 18.0
-    @State private var maxAge: Double = 99.0
+    @State private var maxAge: Double = 57.0
     @State private var maxDistance = 50
     @State private var theme: AppTheme = .system
     @State private var language = "English"
@@ -310,22 +310,24 @@ struct SettingsView: View {
         showDistance: true,
         showAge: true
     )
+    @State private var showingAddMeme = false
     
     var body: some View {
         NavigationView {
             Form {
+                Section("Profile") {
+                    NavigationLink(destination: ProfileManagementView()) {
+                        Text("Edit Profile")
+                    }
+                }
+                
                 Section("Discovery Settings") {
                     Toggle("Show Me", isOn: $showMe)
                     
                     VStack(alignment: .leading) {
                         Text("Age Range: \(Int(minAge))-\(Int(maxAge))")
-                        RangeSlider(value: $minAge, in: 18.0...99.0, step: 1.0)
-                        RangeSlider(value: $maxAge, in: 18.0...99.0, step: 1.0)
-                    }
-                    
-                    VStack(alignment: .leading) {
-                        Text("Maximum Distance: \(maxDistance) miles")
-//                        Slider(value: $maxDistance, in: 1...100, step: 1)
+                        RangeSlider(value: $minAge, in: 18.0...57.0, step: 1.0)
+                        RangeSlider(value: $maxAge, in: 18.0...57.0, step: 1.0)
                     }
                 }
                 
@@ -366,11 +368,11 @@ struct SettingsView: View {
                     .foregroundColor(.red)
                 }
             }
-            .navigationTitle("Settings")
+            .navigationTitle("Preferences")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
+                    Button(action: {
                         viewModel.updatePreferences(
                             theme: theme,
                             language: language,
@@ -378,8 +380,19 @@ struct SettingsView: View {
                             privacy: privacy
                         )
                         dismiss()
+                    }) {
+                        Text("Done")
                     }
                 }
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button(action: { showingAddMeme = true }) {
+                        Image(systemName: "plus.square.on.square")
+                    }
+                    .accessibilityLabel("Upload Meme")
+                }
+            }
+            .sheet(isPresented: $showingAddMeme) {
+                AddMemeToDeckView(viewModel: viewModel)
             }
         }
     }

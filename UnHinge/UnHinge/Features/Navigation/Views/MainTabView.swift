@@ -12,7 +12,7 @@ struct MainTabView: View {
         TabView {
             MemeSwipeView()
                 .tabItem {
-                    Image(systemName: "globe")
+                    Image(systemName: "sparkles")
                     Text("Explore")
                 }
             
@@ -21,17 +21,11 @@ struct MainTabView: View {
                     Image(systemName: "message")
                     Text("Talking Stage")
                 }
-
-            VStack {
-                Text("Settings")
-                    .font(.largeTitle)
-                    .padding()
-                Spacer()
-            }
-            .tabItem {
-                Image(systemName: "gearshape")
-                Text("Settings")
-            }
+            SettingsView()
+                .tabItem {
+                    Image(systemName: "slider.horizontal.3")
+                    Text("Preferences")
+                }
         }
     }
 }

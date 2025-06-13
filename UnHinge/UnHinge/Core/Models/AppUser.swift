@@ -24,6 +24,8 @@ public struct AppUser: Codable, Identifiable, Equatable { // Added Equatable
     public var preferences: UserPreferences
     public var socialLinks: SocialLinks
     public var analytics: UserAnalytics
+    public var gender: String
+    public var dateOfBirth: Date?
     
     public struct UserPreferences: Codable {
         public var theme: AppTheme
@@ -119,6 +121,8 @@ public struct AppUser: Codable, Identifiable, Equatable { // Added Equatable
     public init(id: String,
                 email: String,
                 name: String,
+                gender: String = "Other",
+                dateOfBirth: Date? = nil,
                 bio: String? = nil,
                 profileImageURL: String? = nil,
                 interests: [String] = [],
@@ -132,6 +136,8 @@ public struct AppUser: Codable, Identifiable, Equatable { // Added Equatable
         self.id = id
         self.email = email
         self.name = name
+        self.gender = gender
+        self.dateOfBirth = dateOfBirth
         self.bio = bio
         self.profileImageURL = profileImageURL
         self.interests = interests
@@ -193,7 +199,9 @@ extension AppUser {
                 "matches": analytics.matches,
                 "messagesSent": analytics.messagesSent,
                 "memesShared": analytics.memesShared
-            ]
+            ],
+            "gender": gender,
+            "dateOfBirth": dateOfBirth != nil ? Timestamp(date: dateOfBirth!) : nil
         ]
     }
     
@@ -272,10 +280,19 @@ extension AppUser {
             memesShared: analyticsDict["memesShared"] as? Int ?? 0
         )
         
+        let dateOfBirth: Date?
+        if let dobTimestamp = dictionary["dateOfBirth"] as? Timestamp {
+            dateOfBirth = dobTimestamp.dateValue()
+        } else {
+            dateOfBirth = nil
+        }
+        
         self.init(
             id: id,
             email: email,
             name: name,
+            gender: dictionary["gender"] as? String ?? "Other",
+            dateOfBirth: dateOfBirth,
             bio: bio,
             profileImageURL: profileImageURL,
             interests: interests,

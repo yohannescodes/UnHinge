@@ -1,5 +1,6 @@
 import Foundation
 import FirebaseFirestore
+import FirebaseFirestoreInternal
 
 public typealias User = AppUser
 
@@ -152,20 +153,158 @@ public struct AppUser: Codable, Identifiable, Equatable { // Added Equatable
 // MARK: - Firestore Conversion
 extension AppUser {
     var dictionary: [String: Any] {
-        let encoder = JSONEncoder()
-        guard let data = try? encoder.encode(self),
-              let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-            return [:]
-        }
-        return dict
+        return [
+            "id": id,
+            "email": email,
+            "name": name,
+            "bio": bio as Any,
+            "profileImageURL": profileImageURL as Any,
+            "interests": interests,
+            "isVerified": isVerified,
+            "verificationDate": verificationDate?.timeIntervalSince1970 as Any,
+            "lastActive": lastActive.timeIntervalSince1970,
+            "memeDeck": memeDeck.map { $0.dictionary },
+            "preferences": [
+                "theme": preferences.theme.rawValue,
+                "language": preferences.language,
+                "notifications": [
+                    "newMatches": preferences.notifications.newMatches,
+                    "messages": preferences.notifications.messages,
+                    "likes": preferences.notifications.likes,
+                    "profileViews": preferences.notifications.profileViews,
+                    "marketing": preferences.notifications.marketing
+                ],
+                "privacy": [
+                    "showOnlineStatus": preferences.privacy.showOnlineStatus,
+                    "showLastActive": preferences.privacy.showLastActive,
+                    "showDistance": preferences.privacy.showDistance,
+                    "showAge": preferences.privacy.showAge
+                ]
+            ],
+            "socialLinks": [
+                "instagram": socialLinks.instagram as Any,
+                "twitter": socialLinks.twitter as Any,
+                "tiktok": socialLinks.tiktok as Any,
+                "spotify": socialLinks.spotify as Any
+            ],
+            "analytics": [
+                "activeHours": analytics.activeHours,
+                "totalSwipes": analytics.totalSwipes,
+                "matches": analytics.matches,
+                "messagesSent": analytics.messagesSent,
+                "memesShared": analytics.memesShared
+            ]
+        ]
     }
     
     init?(dictionary: [String: Any]) {
-        let decoder = JSONDecoder()
-        guard let data = try? JSONSerialization.data(withJSONObject: dictionary),
-              let user = try? decoder.decode(AppUser.self, from: data) else {
+        guard let id = dictionary["id"] as? String,
+              let email = dictionary["email"] as? String,
+              let name = dictionary["name"] as? String else {
             return nil
         }
-        self = user
+        
+        let bio = dictionary["bio"] as? String
+        let profileImageURL = dictionary["profileImageURL"] as? String
+        let interests = dictionary["interests"] as? [String] ?? []
+        let isVerified = dictionary["isVerified"] as? Bool ?? false
+        
+        var verificationDate: Date?
+        if let timestamp = dictionary["verificationDate"] as? TimeInterval {
+            verificationDate = Date(timeIntervalSince1970: timestamp)
+        }
+        
+        var lastActive = Date()
+        if let timestamp = dictionary["lastActive"] as? TimeInterval {
+            lastActive = Date(timeIntervalSince1970: timestamp)
+        }
+        
+        let memeDeckData = dictionary["memeDeck"] as? [[String: Any]] ?? []
+        let memeDeck = memeDeckData.compactMap { Meme(dictionary: $0) }
+        
+        // Parse preferences
+        let preferencesDict = dictionary["preferences"] as? [String: Any] ?? [:]
+        let theme = AppTheme(rawValue: preferencesDict["theme"] as? String ?? "system") ?? .system
+        let language = preferencesDict["language"] as? String ?? "en"
+        
+        // Parse notifications
+        let notificationsDict = preferencesDict["notifications"] as? [String: Bool] ?? [:]
+        let notifications = NotificationPreferences(
+            newMatches: notificationsDict["newMatches"] ?? true,
+            messages: notificationsDict["messages"] ?? true,
+            likes: notificationsDict["likes"] ?? true,
+            profileViews: notificationsDict["profileViews"] ?? true,
+            marketing: notificationsDict["marketing"] ?? false
+        )
+        
+        // Parse privacy settings
+        let privacyDict = preferencesDict["privacy"] as? [String: Bool] ?? [:]
+        let privacy = PrivacySettings(
+            showOnlineStatus: privacyDict["showOnlineStatus"] ?? true,
+            showLastActive: privacyDict["showLastActive"] ?? true,
+            showDistance: privacyDict["showDistance"] ?? true,
+            showAge: privacyDict["showAge"] ?? true
+        )
+        
+        let preferences = UserPreferences(
+            theme: theme,
+            language: language,
+            notifications: notifications,
+            privacy: privacy
+        )
+        
+        // Parse social links
+        let socialLinksDict = dictionary["socialLinks"] as? [String: String] ?? [:]
+        let socialLinks = SocialLinks(
+            instagram: socialLinksDict["instagram"],
+            twitter: socialLinksDict["twitter"],
+            tiktok: socialLinksDict["tiktok"],
+            spotify: socialLinksDict["spotify"]
+        )
+        
+        // Parse analytics
+        let analyticsDict = dictionary["analytics"] as? [String: Any] ?? [:]
+        let analytics = UserAnalytics(
+            activeHours: analyticsDict["activeHours"] as? [Int: Int] ?? [:],
+            totalSwipes: analyticsDict["totalSwipes"] as? Int ?? 0,
+            matches: analyticsDict["matches"] as? Int ?? 0,
+            messagesSent: analyticsDict["messagesSent"] as? Int ?? 0,
+            memesShared: analyticsDict["memesShared"] as? Int ?? 0
+        )
+        
+        self.init(
+            id: id,
+            email: email,
+            name: name,
+            bio: bio,
+            profileImageURL: profileImageURL,
+            interests: interests,
+            isVerified: isVerified,
+            verificationDate: verificationDate,
+            lastActive: lastActive,
+            memeDeck: memeDeck,
+            preferences: preferences,
+            socialLinks: socialLinks,
+            analytics: analytics
+        )
+    }
+    
+    private static func convertTimestampsToDate(_ value: Any) -> Any {
+        if let dict = value as? [String: Any] {
+            var newDict = [String: Any]()
+            for (k, v) in dict {
+                newDict[k] = convertTimestampsToDate(v)
+            }
+            return newDict
+        } else if let array = value as? [Any] {
+            return array.map { convertTimestampsToDate($0) }
+        } else if let timestamp = value as? Timestamp {
+            return timestamp.dateValue()
+        } else if let firTimestamp = value as? NSObject, NSStringFromClass(type(of: firTimestamp)).contains("FIRTimestamp") {
+            return (firTimestamp.value(forKey: "dateValue") as? Date) ?? firTimestamp
+        } else {
+            return value
+        }
     }
 }
+

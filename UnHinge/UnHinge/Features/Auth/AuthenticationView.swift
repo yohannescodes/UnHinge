@@ -1,4 +1,5 @@
 import SwiftUI
+import AuthenticationServices // Import for Apple Sign-In Button
 
 struct AuthenticationView: View {
     @EnvironmentObject var viewModel: AuthenticationViewModel
@@ -53,6 +54,26 @@ struct AuthenticationView: View {
             }) {
                 Text(isSignUp ? "Already have an account? Sign In" : "Don't have an account? Sign Up")
                     .font(.footnote)
+            }
+
+            // Apple Sign In Button
+            if !isSignUp { // Show Apple Sign In only on the Sign In screen
+                SignInWithAppleButton(
+                    onRequest: { request in
+                        // You can configure the request here if needed,
+                        // e.g., request.requestedScopes = [.fullName, .email]
+                        // Nonce will be handled by FirebaseService
+                    },
+                    onCompletion: { result in
+                        Task {
+                            await viewModel.signInWithApple()
+                        }
+                    }
+                )
+                .signInWithAppleButtonStyle(.black) // or .white, .whiteOutline
+                .frame(height: 50)
+                .cornerRadius(10)
+                .padding(.top, 10)
             }
         }
         .padding()

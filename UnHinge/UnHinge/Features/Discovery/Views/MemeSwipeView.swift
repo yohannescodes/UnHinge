@@ -13,7 +13,7 @@ struct MemeSwipeView: View {
             } else if let currentMeme = viewModel.currentMeme {
                 ZStack {
                     // Meme Card
-                    MemeCard(meme: currentMeme)
+                    MemeCard(meme: currentMeme, uploader: viewModel.currentMemeUploader) // Pass uploader
                         .offset(x: offset.width, y: 0)
                         .rotationEffect(.degrees(Double(offset.width / 40)))
                         .gesture(
@@ -126,40 +126,77 @@ struct MemeSwipeView: View {
 
 struct MemeCard: View {
     let meme: Meme
+    let uploader: AppUser? // Added uploader
     
     var body: some View {
-        VStack {
-            AsyncImage(url: URL(string: meme.imageName)) { image in
+        VStack(spacing: 8) { // Main container for card elements
+            ZStack(alignment: .bottomLeading) { // Use ZStack for image + overlay
+                // Image
+                AsyncImage(url: URL(string: meme.imageName)) { image in
                 image
                     .resizable()
                     .aspectRatio(contentMode: .fill)
             } placeholder: {
                 ProgressView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity) // Ensure ProgressView fills space
             }
-            .frame(width: 340, height: 400)
+            .frame(width: 340, height: 400) // Main card dimensions
+            .background(Color.gray.opacity(0.2)) // Background for placeholder
             .clipShape(RoundedRectangle(cornerRadius: 20))
             .overlay(
                 RoundedRectangle(cornerRadius: 20)
-                    .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+                    .stroke(Color.gray.opacity(0.2), lineWidth: 1) // Border
             )
+
+            // Uploader Info Overlay
+            if let uploader = uploader {
+                VStack(alignment: .leading) {
+                    Text(uploader.name) // Display uploader's name
+                        .font(.callout)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.white)
+
+                    // You could add more info here like uploader.age if available and desired
+                }
+                .padding(10)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(
+                        LinearGradient(gradient: Gradient(colors: [Color.black.opacity(0.7), Color.clear]),
+                                       startPoint: .bottom, endPoint: .center)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 20)) // Match card's corner radius for the gradient part
+                }
+            }
+            .frame(width: 340, height: 400) // Ensure ZStack itself has the defined frame
             
+            // Tags section
             if !meme.tags.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack {
                         ForEach(meme.tags, id: \.self) { tag in
-                            Text(tag)
-                                .font(.caption)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 6)
-                                .background(Color.blue.opacity(0.1))
-                                .foregroundColor(.blue)
-                                .clipShape(Capsule())
+                                Text(tag)
+                                    .font(.caption)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 6)
+                                    .background(Color.blue.opacity(0.1))
+                                    .foregroundColor(.blue)
+                                    .clipShape(Capsule())
+                            }
                         }
-                    }
-                    .padding(.horizontal)
+                        .padding(.horizontal) // Horizontal padding for the content within ScrollView
                 }
+                .frame(height: 30) // Define a height for the tags scroll view area
+                .padding(.horizontal, 10) // Padding for the ScrollView itself to not touch edges
+            } else {
+                // Keep the card height consistent even if there are no tags
+                Spacer().frame(height: 30)
             }
         }
+        .frame(width: 340) // Overall width of the card including potential tags area
+        .padding(.bottom, meme.tags.isEmpty ? 0 : 10) // Add padding if tags are present
+        .background(Color.white) // Add a background to the VStack if needed, e.g., for shadow
+        .cornerRadius(20) // Apply corner radius to the VStack
+        .shadow(radius: 3) // Optional shadow for the card
     }
 }
 

@@ -45,4 +45,16 @@ public struct Meme: Codable, Identifiable {
         case likes
         case views
     }
+    
+    public var dictionary: [String: Any] {
+        return [
+            "id": id,
+            "imageName": imageName,
+            "tags": tags,
+            "uploadedBy": uploadedBy,
+            "uploadedAt": Timestamp(date: uploadedAt),
+            "likes": likes,
+            "views": views
+        ]
+    }
 } 

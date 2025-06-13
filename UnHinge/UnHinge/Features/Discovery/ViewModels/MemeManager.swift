@@ -109,21 +109,32 @@ final class MemeManager: ObservableObject {
                 // Create meme document in Firestore
                 let meme = Meme(
                     id: UUID().uuidString,
-                    imageUrl: downloadURL.absoluteString,
-                    caption: caption,
+                    imageName: downloadURL.absoluteString,
+                    tags: [], // No tags provided here
                     uploadedBy: userId,
                     uploadedAt: Date(),
                     likes: 0,
-                    skips: 0
+                    views: 0
                 )
                 
-                do {
-                    try self.db.collection("memes").document(meme.id).setData(from: meme)
-                    completion(.success(()))
-                } catch {
-                    completion(.failure(error))
+                let memeData: [String: Any] = [
+                    "id": meme.id,
+                    "imageName": meme.imageName,
+                    "tags": meme.tags,
+                    "uploadedBy": meme.uploadedBy,
+                    "uploadedAt": Timestamp(date: meme.uploadedAt),
+                    "likes": meme.likes,
+                    "views": meme.views
+                ]
+                self.db.collection("memes").document(meme.id).setData(memeData) { error in
+                    if let error = error {
+                        completion(.failure(error))
+                    } else {
+                        completion(.success(()))
+                    }
                 }
             }
         }
     }
 } 
+

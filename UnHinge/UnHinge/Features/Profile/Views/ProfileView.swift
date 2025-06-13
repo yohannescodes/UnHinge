@@ -2,6 +2,7 @@ import SwiftUI
 import PhotosUI
 import Charts
 import UIKit
+import FirebaseAuth // For Auth.auth().signOut() in SettingsView
 
 struct ProfileView: View {
     @StateObject private var viewModel: ProfileViewModel
@@ -11,8 +12,15 @@ struct ProfileView: View {
     @State private var showingAnalytics = false
     @State private var showingVerification = false
     
-    init(viewModel: ProfileViewModel = ProfileViewModel()) {
+    @MainActor
+    init(viewModel: ProfileViewModel) {
         _viewModel = StateObject(wrappedValue: viewModel)
+    }
+
+    @MainActor
+    init() {
+        let defaultViewModel = ProfileViewModel()
+        _viewModel = StateObject(wrappedValue: defaultViewModel)
     }
     
     var body: some View {
@@ -29,12 +37,22 @@ struct ProfileView: View {
                             showingEditProfile: $showingEditProfile,
                             showingAnalytics: $showingAnalytics,
                             showingSettings: $showingSettings,
-                            showingDeleteConfirmation: $showingDeleteConfirmation
+                            showingDeleteConfirmation: $showingDeleteConfirmation,
+                            showingAddMemeView: $viewModel.showingAddMemeView
                         )
+
+                        if let user = viewModel.currentUser {
+                            MemeDeckView(memes: user.memeDeck, onDelete: { memeId in
+                                viewModel.removeMemeFromDeck(memeId: memeId)
+                            })
+                        }
                     }
                 }
             }
             .navigationTitle("Profile")
+            .sheet(isPresented: $viewModel.showingAddMemeView) {
+                AddMemeToDeckView(viewModel: viewModel)
+            }
             .sheet(isPresented: $showingEditProfile) {
                 if let user = viewModel.currentUser {
                     EditProfileView(user: user)
@@ -71,6 +89,69 @@ struct ProfileView: View {
         }
     }
 }
+
+// MARK: - Meme Deck View
+private struct MemeDeckView: View {
+    let memes: [Meme]
+    let onDelete: (String) -> Void
+
+    private let columns: [GridItem] = [
+        GridItem(.flexible(), spacing: 8),
+        GridItem(.flexible(), spacing: 8)
+    ]
+
+    var body: some View {
+        VStack(alignment: .leading) {
+            Text("My Meme Deck (\(memes.count))")
+                .font(.title2)
+                .bold()
+                .padding(.horizontal)
+
+            if memes.isEmpty {
+                Text("Your meme deck is empty. Add some memes!")
+                    .foregroundColor(.secondary)
+                    .padding()
+                    .frame(maxWidth: .infinity, alignment: .center)
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    LazyHGrid(rows: columns, spacing: 8) {
+                        ForEach(memes) { meme in
+                            ZStack(alignment: .topTrailing) {
+                                AsyncImage(url: URL(string: meme.imageName)) { image in
+                                    image.resizable()
+                                        .aspectRatio(contentMode: .fill)
+                                } placeholder: {
+                                    Rectangle()
+                                        .fill(Color.gray.opacity(0.3))
+                                        .overlay(ProgressView())
+                                }
+                                .frame(width: 150, height: 150)
+                                .cornerRadius(8)
+                                .clipped()
+
+                                Button(action: {
+                                    onDelete(meme.id)
+                                }) {
+                                    Image(systemName: "trash.circle.fill")
+                                        .font(.title2)
+                                        .foregroundColor(.red)
+                                        .padding(6)
+                                        .background(Color.black.opacity(0.6))
+                                        .clipShape(Circle())
+                                }
+                                .padding(4)
+                            }
+                        }
+                    }
+                    .padding(.horizontal)
+                }
+                .frame(height: 316)
+            }
+        }
+        .padding(.vertical)
+    }
+}
+
 
 // MARK: - Edit Profile View
 struct EditProfileView: View {
@@ -211,8 +292,8 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     
     @State private var showMe = true
-    @State private var minAge = 18
-    @State private var maxAge = 99
+    @State private var minAge: Double = 18.0
+    @State private var maxAge: Double = 99.0
     @State private var maxDistance = 50
     @State private var theme: AppTheme = .system
     @State private var language = "English"
@@ -237,14 +318,14 @@ struct SettingsView: View {
                     Toggle("Show Me", isOn: $showMe)
                     
                     VStack(alignment: .leading) {
-                        Text("Age Range: \(minAge)-\(maxAge)")
-                        RangeSlider(value: $minAge, in: 18...99, step: 1)
-                        RangeSlider(value: $maxAge, in: 18...99, step: 1)
+                        Text("Age Range: \(Int(minAge))-\(Int(maxAge))")
+                        RangeSlider(value: $minAge, in: 18.0...99.0, step: 1.0)
+                        RangeSlider(value: $maxAge, in: 18.0...99.0, step: 1.0)
                     }
                     
                     VStack(alignment: .leading) {
                         Text("Maximum Distance: \(maxDistance) miles")
-                        Slider(value: $maxDistance, in: 1...100, step: 1)
+//                        Slider(value: $maxDistance, in: 1...100, step: 1)
                     }
                 }
                 
@@ -313,16 +394,15 @@ struct AnalyticsView: View {
         NavigationView {
             ScrollView {
                 VStack(spacing: 20) {
-                    if let analytics = user.analytics {
-                        // Profile Stats
-                        VStack(spacing: 16) {
-                            Text("Profile Stats")
+                    let analytics = user.analytics
+                    VStack(spacing: 16) {
+                        Text("Profile Stats")
                                 .font(.headline)
                             
                             HStack(spacing: 20) {
-                                StatView(title: "Profile Views", value: "\(analytics.profileViews)")
-                                StatView(title: "Meme Views", value: "\(analytics.memeViews)")
-                                StatView(title: "Total Likes", value: "\(analytics.totalLikes)")
+                                StatView(title: "Total Swipes", value: String(analytics.totalSwipes))
+                                StatView(title: "Memes Shared", value: String(analytics.memesShared))
+                                StatView(title: "Matches", value: String(analytics.matches))
                             }
                         }
                         .padding()
@@ -330,15 +410,12 @@ struct AnalyticsView: View {
                         .cornerRadius(10)
                         .shadow(radius: 2)
                         
-                        // Match Stats
                         VStack(spacing: 16) {
                             Text("Match Stats")
                                 .font(.headline)
                             
                             HStack(spacing: 20) {
-                                StatView(title: "Match Rate", value: String(format: "%.1f%%", analytics.matchRate * 100))
-                                StatView(title: "Response Rate", value: String(format: "%.1f%%", analytics.responseRate * 100))
-                                StatView(title: "Avg Response", value: formatTimeInterval(analytics.averageResponseTime))
+                                StatView(title: "Messages Sent", value: String(analytics.messagesSent))
                             }
                         }
                         .padding()
@@ -346,7 +423,6 @@ struct AnalyticsView: View {
                         .cornerRadius(10)
                         .shadow(radius: 2)
                         
-                        // Activity Chart
                         VStack(spacing: 16) {
                             Text("Activity Hours")
                                 .font(.headline)
@@ -391,7 +467,7 @@ struct AnalyticsView: View {
             return "\(hours)h \(remainingMinutes)m"
         }
     }
-}
+
 
 // MARK: - Verification View
 struct VerificationView: View {
@@ -445,9 +521,20 @@ private struct ProfileActionsView: View {
     @Binding var showingAnalytics: Bool
     @Binding var showingSettings: Bool
     @Binding var showingDeleteConfirmation: Bool
-    
+    @Binding var showingAddMemeView: Bool
+
     var body: some View {
         VStack(spacing: 12) {
+            Button(action: { showingAddMemeView = true }) {
+                Text("Add Meme to Deck")
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.green)
+                    .cornerRadius(10)
+            }
+
             Button(action: { showingEditProfile = true }) {
                 Text("Edit Profile")
                     .font(.headline)
@@ -493,25 +580,26 @@ private struct ProfileActionsView: View {
 }
 
 // MARK: - Range Slider
-struct RangeSlider: View {
-    @Binding var value: Int
-    let range: ClosedRange<Int>
-    let step: Int
-    
-    init(value: Binding<Int>, in range: ClosedRange<Int>, step: Int = 1) {
+struct RangeSlider<V>: View where V: BinaryFloatingPoint, V.Stride: BinaryFloatingPoint {
+    @Binding var value: V
+    let range: ClosedRange<V>
+    let step: V.Stride
+
+    init(value: Binding<V>, in range: ClosedRange<V>, step: V.Stride) {
         self._value = value
         self.range = range
         self.step = step
     }
-    
+
     var body: some View {
         Slider(
-            value: Binding(
-                get: { Double(value) },
-                set: { value = Int($0) }
-            ),
-            in: Double(range.lowerBound)...Double(range.upperBound),
-            step: Double(step)
+            value: self.$value,
+            in: self.range,
+            step: self.step,
+            onEditingChanged: { _ in },
+            minimumValueLabel: Text(String(describing: self.range.lowerBound)),
+            maximumValueLabel: Text(String(describing: self.range.upperBound)),
+            label: { EmptyView() }
         )
     }
-} 
+}

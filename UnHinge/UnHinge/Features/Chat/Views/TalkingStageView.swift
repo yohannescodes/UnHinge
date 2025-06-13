@@ -97,7 +97,7 @@ struct ConversationRow: View {
             
             Spacer()
             
-            if conversation.messages.contains(where: { !$0.isRead && $0.senderId != FirebaseService.shared.currentUser?.uid }) {
+            if conversation.messages.contains(where: { !$0.isRead && $0.senderId != FirebaseService.shared.currentUser?.id }) { // Changed .uid to .id
                 Circle()
                     .fill(Color.blue)
                     .frame(width: 10, height: 10)

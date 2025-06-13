@@ -16,7 +16,7 @@ Built with 💻 Xcode 26 (Developer Beta) · 🎯 Swift 5 · ❤️ SwiftUI · �
 * Memes can be uploaded (JPG, PNG, GIF) or selected from a built-in meme pool.
 * Profiles also include:
 
-  * Name, Age, Bio, Tags (e.g. #introvert, #darkhumor)
+  * Name, Age, Tags (e.g. #introvert, #darkhumor)
   * Optional social handles or Spotify/Apple Music links
 
 ### 👀 Swipe Interface
@@ -58,7 +58,7 @@ Built with 💻 Xcode 26 (Developer Beta) · 🎯 Swift 5 · ❤️ SwiftUI · �
 | Tech                 | Usage                               |
 | -------------------- | ----------------------------------- |
 | Swift 5              | Core app logic                      |
-| SwiftUI / UIKit      | UI layers and views                 |
+| SwiftUI              | UI layers and views                 |
 | Combine / AsyncAwait | Reactive bindings                   |
 | Firebase (opt)       | Authentication, Matching, Analytics |
 |                      |                                     |
@@ -104,7 +104,7 @@ MIT License — meme responsibly.
 
 ## 🧃 Credits
 
-* App icon: Concept by John, generated & refined with AI tools
+* App icon: Concept by Yohannes, generated & refined with AI tools
 * Fonts: SF Pro (system) + Impact for memes
 * Inspiration: The internet’s collective unhinged energy
 
